@@ -627,8 +627,24 @@ function renderPage(data, currentTab) {
           padding: 0.34rem 0.2rem;
         }
         .ranking-table td.col-team {
+          display: table-cell;
+          text-align: center;
+          vertical-align: middle;
           min-width: 0;
-          gap: 0.22rem;
+          gap: 0;
+          padding-left: 0.08rem;
+          padding-right: 0.08rem;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+        .ranking-table td.col-team img {
+          display: block;
+          margin: 0 auto 0.1rem;
+        }
+        .ranking-table td.col-team span {
+          display: block;
+          line-height: 1.05;
+          text-align: center;
         }
         .ranking-table th.col-team,
         .ranking-table td.col-team {
