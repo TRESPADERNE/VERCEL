@@ -634,21 +634,26 @@ function renderPage(data, currentTab) {
           gap: 0;
           padding-left: 0.08rem;
           padding-right: 0.08rem;
-          overflow-wrap: anywhere;
-          word-break: break-word;
+          white-space: nowrap;
+          overflow: hidden;
         }
         .ranking-table td.col-team img {
-          display: block;
-          margin: 0 auto 0.1rem;
+          display: inline-block;
+          vertical-align: middle;
+          margin: 0 0.12rem 0 0;
         }
         .ranking-table td.col-team span {
-          display: block;
+          display: inline-block;
+          vertical-align: middle;
           line-height: 1.05;
           text-align: center;
+          max-width: calc(100% - 17px);
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .ranking-table th.col-team,
         .ranking-table td.col-team {
-          width: 15%;
+          width: 20%;
         }
         .ranking-table th.col-metric,
         .ranking-table td.col-metric {
@@ -687,7 +692,7 @@ function renderPage(data, currentTab) {
           <img src="/static/logo_I_BCF_CUP.png" alt="Logo BCF CUP" />
           <img src="/static/logoFundacionCajaBurgos.png" alt="Fundacion Caja Burgos" />
         </div>
-        <h1>I Torneo BCF CUP Alevin Femenino<br />Fundacion Caja de Burgos</h1>
+        <h1>II Torneo BCF CUP Alevin Femenino<br />Fundacion Caja de Burgos</h1>
         <div class="toolbar">
           <span>Ultima consulta: ${escapeHtml(formatDate(data.generatedAt))}</span>
           <a class="refresh" href="/?tab=${encodeURIComponent(currentTab)}">Actualizar</a>
