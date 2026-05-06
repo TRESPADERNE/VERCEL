@@ -5,6 +5,7 @@ const { google } = require("googleapis");
 const app = express();
 const port = process.env.PORT || 3000;
 const CACHE_TTL_MS = 60 * 1000;
+const AUTO_REFRESH_MS = 60 * 1000;
 
 const TABS = ["Grupo A", "Grupo B", "Fase Oro", "Fase Plata"];
 const TEAM_ALIAS = {
@@ -32,8 +33,6 @@ let cache = {
 let cacheLoadingPromise = null;
 
 app.use("/static", express.static(path.join(__dirname, "static")));
-
-const AUTO_REFRESH_MS = 30 * 1000;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -354,6 +353,11 @@ function formatDate(date) {
     timeStyle: "short",
     timeZone: "Europe/Madrid",
   }).format(date);
+}
+
+function getCurrentTabFromReq(req) {
+  const requestedTab = String(req.query.tab || "Grupo A");
+  return TABS.includes(requestedTab) ? requestedTab : "Grupo A";
 }
 
 function renderPage(data, currentTab) {
@@ -702,13 +706,13 @@ function renderPage(data, currentTab) {
         </div>
         <h1>II Torneo BCF CUP Alevin Femenino<br />Fundacion Caja de Burgos</h1>
         <div class="toolbar">
-          <span>Ultima consulta: ${escapeHtml(formatDate(data.generatedAt))}</span>
+          <span id="last-updated">Ultima consulta: ${escapeHtml(formatDate(data.generatedAt))}</span>
           <a class="refresh" href="/?tab=${encodeURIComponent(currentTab)}">Actualizar</a>
         </div>
       </header>
 
       <nav class="tabs" aria-label="Fases del torneo">${renderTabs(currentTab)}</nav>
-      <section>${renderBodyByTab(data, currentTab)}</section>
+      <section id="tab-content">${renderBodyByTab(data, currentTab)}</section>
 
       <footer class="sponsors">
         <h2 class="sponsors-title">Con la colaboracion de:</h2>
@@ -723,9 +727,31 @@ function renderPage(data, currentTab) {
     <script>
       (function autoRefresh() {
         const refreshMs = ${AUTO_REFRESH_MS};
-        setInterval(() => {
+        const tabContent = document.getElementById("tab-content");
+        const lastUpdated = document.getElementById("last-updated");
+
+        async function updateData() {
           if (document.visibilityState !== "visible") return;
-          window.location.reload();
+
+          const params = new URLSearchParams(window.location.search);
+          const tab = params.get("tab") || "Grupo A";
+          const response = await fetch("/api/data?tab=" + encodeURIComponent(tab), {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          });
+          if (!response.ok) return;
+
+          const payload = await response.json();
+          if (tabContent && typeof payload.bodyHtml === "string") {
+            tabContent.innerHTML = payload.bodyHtml;
+          }
+          if (lastUpdated && typeof payload.generatedAtFormatted === "string") {
+            lastUpdated.textContent = "Ultima consulta: " + payload.generatedAtFormatted;
+          }
+        }
+
+        setInterval(() => {
+          updateData().catch(() => {});
         }, refreshMs);
       })();
     </script>
@@ -737,9 +763,25 @@ app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
 });
 
+app.get("/api/data", async (req, res) => {
+  const currentTab = getCurrentTabFromReq(req);
+
+  try {
+    const data = await getTournamentData();
+    res.status(200).json({
+      generatedAt: data.generatedAt,
+      generatedAtFormatted: formatDate(data.generatedAt),
+      currentTab,
+      bodyHtml: renderBodyByTab(data, currentTab),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al cargar datos" });
+  }
+});
+
 app.get("/", async (req, res) => {
-  const requestedTab = String(req.query.tab || "Grupo A");
-  const currentTab = TABS.includes(requestedTab) ? requestedTab : "Grupo A";
+  const currentTab = getCurrentTabFromReq(req);
 
   try {
     const data = await getTournamentData();
