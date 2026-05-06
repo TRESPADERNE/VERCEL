@@ -4,6 +4,7 @@ const { google } = require("googleapis");
 
 const app = express();
 const port = process.env.PORT || 3000;
+const CACHE_TTL_MS = 60 * 1000;
 
 const TABS = ["Grupo A", "Grupo B", "Fase Oro", "Fase Plata"];
 const TEAM_ALIAS = {
@@ -26,6 +27,7 @@ const TEAM_ALIAS_NORMALIZED = Object.fromEntries(
 
 let cache = {
   data: null,
+  fetchedAt: 0,
 };
 let cacheLoadingPromise = null;
 
@@ -169,7 +171,8 @@ async function getFinalData(sheets, sheetId, sheetName) {
 }
 
 async function getTournamentData() {
-  if (cache.data) {
+  const now = Date.now();
+  if (cache.data && now - cache.fetchedAt < CACHE_TTL_MS) {
     return cache.data;
   }
 
@@ -194,7 +197,10 @@ async function getTournamentData() {
       fasePlata,
     };
 
-    cache = { data };
+    cache = {
+      data,
+      fetchedAt: Date.now(),
+    };
     return data;
   })();
 
