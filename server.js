@@ -25,9 +25,9 @@ const TEAM_ALIAS_NORMALIZED = Object.fromEntries(
 );
 
 let cache = {
-  expiresAt: 0,
   data: null,
 };
+let cacheLoadingPromise = null;
 
 app.use("/static", express.static(path.join(__dirname, "static")));
 
@@ -124,11 +124,27 @@ async function readRange(sheets, sheetId, range) {
   return response.data.values || [];
 }
 
+async function readRanges(sheets, sheetId, ranges) {
+  const response = await sheets.spreadsheets.values.batchGet({
+    spreadsheetId: sheetId,
+    ranges,
+  });
+
+  const valueRanges = response.data.valueRanges || [];
+  const map = {};
+  for (const valueRange of valueRanges) {
+    if (!valueRange?.range) continue;
+    map[valueRange.range] = valueRange.values || [];
+  }
+
+  return ranges.map((range) => map[range] || []);
+}
+
 async function getGroupData(sheets, sheetId, sheetName) {
-  const [matchesRows, penaltiesRows, tableRows] = await Promise.all([
-    readRange(sheets, sheetId, `'${sheetName}'!B3:I8`),
-    readRange(sheets, sheetId, `'${sheetName}'!E12:I17`),
-    readRange(sheets, sheetId, `'${sheetName}'!K2:T6`),
+  const [matchesRows, penaltiesRows, tableRows] = await readRanges(sheets, sheetId, [
+    `'${sheetName}'!B3:I8`,
+    `'${sheetName}'!E12:I17`,
+    `'${sheetName}'!K2:T6`,
   ]);
 
   const matches = matchesRows.map((row, index) => rowToMatch(row, penaltiesRows[index] || []));
@@ -139,12 +155,11 @@ async function getGroupData(sheets, sheetId, sheetName) {
 }
 
 async function getFinalData(sheets, sheetId, sheetName) {
-  const [semiRows, semiPenaltiesRows, finalRows, finalPenaltiesRows] = await Promise.all([
-    readRange(sheets, sheetId, `'${sheetName}'!B4:I5`),
-    readRange(sheets, sheetId, `'${sheetName}'!E9:I10`),
-    readRange(sheets, sheetId, `'${sheetName}'!B14:I15`),
-    readRange(sheets, sheetId, `'${sheetName}'!E19:I20`),
-  ]);
+  const [semiRows, semiPenaltiesRows, finalRows, finalPenaltiesRows] = await readRanges(
+    sheets,
+    sheetId,
+    [`'${sheetName}'!B4:I5`, `'${sheetName}'!E9:I10`, `'${sheetName}'!B14:I15`, `'${sheetName}'!E19:I20`]
+  );
 
   return {
     sheetName,
@@ -153,33 +168,41 @@ async function getFinalData(sheets, sheetId, sheetName) {
   };
 }
 
-async function getTournamentData(forceRefresh = false) {
-  if (!forceRefresh && cache.data && Date.now() < cache.expiresAt) {
+async function getTournamentData() {
+  if (cache.data) {
     return cache.data;
   }
 
-  const { sheets, sheetId } = buildGoogleClient();
-  const [groupA, groupB, faseOro, fasePlata] = await Promise.all([
-    getGroupData(sheets, sheetId, "Grupo A"),
-    getGroupData(sheets, sheetId, "Grupo B"),
-    getFinalData(sheets, sheetId, "Fase Oro"),
-    getFinalData(sheets, sheetId, "Fase Plata"),
-  ]);
+  if (cacheLoadingPromise) {
+    return cacheLoadingPromise;
+  }
 
-  const data = {
-    generatedAt: new Date(),
-    groupA,
-    groupB,
-    faseOro,
-    fasePlata,
-  };
+  cacheLoadingPromise = (async () => {
+    const { sheets, sheetId } = buildGoogleClient();
+    const [groupA, groupB, faseOro, fasePlata] = await Promise.all([
+      getGroupData(sheets, sheetId, "Grupo A"),
+      getGroupData(sheets, sheetId, "Grupo B"),
+      getFinalData(sheets, sheetId, "Fase Oro"),
+      getFinalData(sheets, sheetId, "Fase Plata"),
+    ]);
 
-  cache = {
-    expiresAt: Date.now() + 30 * 1000,
-    data,
-  };
+    const data = {
+      generatedAt: new Date(),
+      groupA,
+      groupB,
+      faseOro,
+      fasePlata,
+    };
 
-  return data;
+    cache = { data };
+    return data;
+  })();
+
+  try {
+    return await cacheLoadingPromise;
+  } finally {
+    cacheLoadingPromise = null;
+  }
 }
 
 function renderMatchCard(match, shaded = false) {
@@ -651,7 +674,7 @@ function renderPage(data, currentTab) {
         <h1>I Torneo BCF CUP Alevin Femenino<br />Fundacion Caja de Burgos</h1>
         <div class="toolbar">
           <span>Ultima consulta: ${escapeHtml(formatDate(data.generatedAt))}</span>
-          <a class="refresh" href="/?tab=${encodeURIComponent(currentTab)}&refresh=1">Actualizar</a>
+          <a class="refresh" href="/?tab=${encodeURIComponent(currentTab)}">Actualizar</a>
         </div>
       </header>
 
@@ -679,10 +702,9 @@ app.get("/health", (_req, res) => {
 app.get("/", async (req, res) => {
   const requestedTab = String(req.query.tab || "Grupo A");
   const currentTab = TABS.includes(requestedTab) ? requestedTab : "Grupo A";
-  const refresh = req.query.refresh === "1";
 
   try {
-    const data = await getTournamentData(refresh);
+    const data = await getTournamentData();
     res.status(200).send(renderPage(data, currentTab));
   } catch (error) {
     console.error(error);
