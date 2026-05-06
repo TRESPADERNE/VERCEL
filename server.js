@@ -216,7 +216,17 @@ function renderClassificationTable(table) {
     return '<p class="empty">No hay datos de clasificacion disponibles.</p>';
   }
 
-  const headersHtml = table.headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
+  const metricHeaders = new Set(["POS", "PTS", "PJ", "PG", "PE", "PP", "GF", "GC", "DG"]);
+  const headersHtml = table.headers
+    .map((header) => {
+      const normalizedHeader = String(header || "").toUpperCase();
+      const classes = [];
+      if (normalizedHeader === "EQUIPO") classes.push("col-team");
+      if (metricHeaders.has(normalizedHeader)) classes.push("col-metric");
+      const classAttr = classes.length ? ` class="${classes.join(" ")}"` : "";
+      return `<th${classAttr}>${escapeHtml(header)}</th>`;
+    })
+    .join("");
   const rowsHtml = table.rows
     .map((row) => {
       const cells = row
@@ -228,6 +238,9 @@ function renderClassificationTable(table) {
             return `<td class="col-team"><img src="${teamLogo(teamName)}" alt="${escapeHtml(
               teamLabel
             )}" loading="lazy" /><span>${escapeHtml(teamLabel)}</span></td>`;
+          }
+          if (metricHeaders.has(header)) {
+            return `<td class="col-metric">${escapeHtml(value)}</td>`;
           }
           return `<td>${escapeHtml(value)}</td>`;
         })
@@ -394,14 +407,14 @@ function renderPage(data, currentTab) {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
-        gap: 0.45rem;
+        gap: 0.35rem;
         margin: 0.9rem 0;
         padding-bottom: 0.1rem;
       }
       .tab-link {
         text-align: center;
         text-decoration: none;
-        padding: 0.6rem 0.4rem;
+        padding: 0.5rem 0.3rem;
         border-radius: 10px;
         border: 1px solid var(--line);
         color: var(--brand);
@@ -409,7 +422,8 @@ function renderPage(data, currentTab) {
         font-weight: 700;
         white-space: nowrap;
         flex: 0 0 auto;
-        min-width: 128px;
+        min-width: 96px;
+        font-size: 0.83rem;
       }
       .tab-link.active {
         background: var(--brand);
@@ -451,11 +465,21 @@ function renderPage(data, currentTab) {
         text-align: center;
       }
       .ranking-table td.col-team {
-        text-align: left;
+        text-align: center;
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 0.4rem;
         min-width: 112px;
+      }
+      .ranking-table td.col-team span {
+        text-align: center;
+      }
+      .ranking-table th.col-metric,
+      .ranking-table td.col-metric {
+        width: 5.5%;
+        padding-left: 0.15rem;
+        padding-right: 0.15rem;
       }
       .ranking-table td.col-team img {
         width: 19px;
@@ -554,11 +578,21 @@ function renderPage(data, currentTab) {
       }
       @media (max-width: 460px) {
         .page { padding: 0.7rem 0.45rem 1.2rem; }
-        .tabs { gap: 0.35rem; }
+        .tabs {
+          display: flex;
+          justify-content: space-between;
+          gap: 0;
+          overflow: visible;
+          padding-bottom: 0;
+        }
         .tab-link {
-          min-width: 114px;
-          padding: 0.5rem 0.35rem;
-          font-size: 0.84rem;
+          flex: 0 0 20%;
+          min-width: 20%;
+          max-width: 20%;
+          padding: 0.42rem 0.15rem;
+          font-size: 0.72rem;
+          white-space: normal;
+          line-height: 1.1;
         }
         .ranking-table {
           min-width: 100%;
@@ -572,6 +606,16 @@ function renderPage(data, currentTab) {
         .ranking-table td.col-team {
           min-width: 0;
           gap: 0.22rem;
+        }
+        .ranking-table th.col-team,
+        .ranking-table td.col-team {
+          width: 15%;
+        }
+        .ranking-table th.col-metric,
+        .ranking-table td.col-metric {
+          width: 8%;
+          padding-left: 0.08rem;
+          padding-right: 0.08rem;
         }
         .ranking-table td.col-team img {
           width: 15px;
