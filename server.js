@@ -390,10 +390,13 @@ function renderPage(data, currentTab) {
         font-weight: 600;
       }
       .tabs {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
         gap: 0.45rem;
         margin: 0.9rem 0;
+        padding-bottom: 0.1rem;
       }
       .tab-link {
         text-align: center;
@@ -404,6 +407,9 @@ function renderPage(data, currentTab) {
         color: var(--brand);
         background: #fff;
         font-weight: 700;
+        white-space: nowrap;
+        flex: 0 0 auto;
+        min-width: 128px;
       }
       .tab-link.active {
         background: var(--brand);
@@ -427,7 +433,7 @@ function renderPage(data, currentTab) {
       }
       .ranking-table {
         width: 100%;
-        min-width: 600px;
+        min-width: 520px;
         border-collapse: collapse;
       }
       .ranking-table th {
@@ -449,7 +455,7 @@ function renderPage(data, currentTab) {
         display: flex;
         align-items: center;
         gap: 0.4rem;
-        min-width: 136px;
+        min-width: 112px;
       }
       .ranking-table td.col-team img {
         width: 19px;
@@ -546,9 +552,44 @@ function renderPage(data, currentTab) {
         color: var(--muted);
         text-align: center;
       }
+      @media (max-width: 460px) {
+        .page { padding: 0.7rem 0.45rem 1.2rem; }
+        .tabs { gap: 0.35rem; }
+        .tab-link {
+          min-width: 114px;
+          padding: 0.5rem 0.35rem;
+          font-size: 0.84rem;
+        }
+        .ranking-table {
+          min-width: 100%;
+          table-layout: fixed;
+        }
+        .ranking-table th,
+        .ranking-table td {
+          font-size: 0.72rem;
+          padding: 0.34rem 0.2rem;
+        }
+        .ranking-table td.col-team {
+          min-width: 0;
+          gap: 0.22rem;
+        }
+        .ranking-table td.col-team img {
+          width: 15px;
+          height: 15px;
+        }
+      }
       @media (min-width: 800px) {
         .page { padding: 1.1rem 1rem 1.8rem; }
-        .tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .tabs {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          overflow: visible;
+          padding-bottom: 0;
+        }
+        .tab-link {
+          min-width: 0;
+          white-space: normal;
+        }
         .header-logos img { height: 80px; }
         h1 { font-size: 1.35rem; }
         .team-name { font-size: 0.95rem; }
