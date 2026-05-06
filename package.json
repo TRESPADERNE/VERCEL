@@ -12,6 +12,6 @@
     "googleapis": "^148.0.0"
   },
   "engines": {
-    "node": ">=18"
+    "node": "20.x"
   }
 }
