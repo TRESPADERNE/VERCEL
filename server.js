@@ -6,6 +6,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 const CACHE_TTL_MS = 60 * 1000;
 const AUTO_REFRESH_MS = 60 * 1000;
+const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=120";
 
 const TABS = ["Grupo A", "Grupo B", "Fase Oro", "Fase Plata"];
 const TEAM_ALIAS = {
@@ -737,7 +738,6 @@ function renderPage(data, currentTab) {
           const tab = params.get("tab") || "Grupo A";
           const response = await fetch("/api/data?tab=" + encodeURIComponent(tab), {
             headers: { Accept: "application/json" },
-            cache: "no-store",
           });
           if (!response.ok) return;
 
@@ -768,6 +768,7 @@ app.get("/api/data", async (req, res) => {
 
   try {
     const data = await getTournamentData();
+    res.set("Cache-Control", EDGE_CACHE_CONTROL);
     res.status(200).json({
       generatedAt: data.generatedAt,
       generatedAtFormatted: formatDate(data.generatedAt),
@@ -785,6 +786,7 @@ app.get("/", async (req, res) => {
 
   try {
     const data = await getTournamentData();
+    res.set("Cache-Control", EDGE_CACHE_CONTROL);
     res.status(200).send(renderPage(data, currentTab));
   } catch (error) {
     console.error(error);
