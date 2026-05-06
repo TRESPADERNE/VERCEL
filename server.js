@@ -33,6 +33,8 @@ let cacheLoadingPromise = null;
 
 app.use("/static", express.static(path.join(__dirname, "static")));
 
+const AUTO_REFRESH_MS = 30 * 1000;
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -718,6 +720,15 @@ function renderPage(data, currentTab) {
         </div>
       </footer>
     </main>
+    <script>
+      (function autoRefresh() {
+        const refreshMs = ${AUTO_REFRESH_MS};
+        setInterval(() => {
+          if (document.visibilityState !== "visible") return;
+          window.location.reload();
+        }, refreshMs);
+      })();
+    </script>
   </body>
 </html>`;
 }
