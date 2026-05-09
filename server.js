@@ -730,7 +730,7 @@ function renderPage(data, currentTab) {
       <footer class="sponsors">
         <h2 class="sponsors-title">Con la colaboracion de:</h2>
         <div class="sponsors-logos">
-          <img src="/static/molinotejada.png" alt="Molino Tejada" />
+          <img src="/static/frutopia.png" alt="Molino Tejada" />
           <img src="/static/ezsa.png" alt="Ezsa" />
           <img src="/static/nb.jpg" alt="Grupo NB" />
           <img src="/static/diputacion.jpg" alt="Diputacion" />
