@@ -94,7 +94,7 @@ function teamLogo(teamName) {
     case "Real Sociedad":
       return "/static/realsociedad.png";
     default:
-      return "/static/logo_I_BCF_CUP.png";
+      return "/static/logo_II_BCF_CUP.png";
   }
 }
 
@@ -714,7 +714,7 @@ function renderPage(data, currentTab) {
     <main class="page">
       <header class="header">
         <div class="header-logos">
-          <img src="/static/logo_I_BCF_CUP.png" alt="Logo BCF CUP" />
+          <img src="/static/logo_II_BCF_CUP.png" alt="Logo BCF CUP" />
           <img src="/static/logoFundacionCajaBurgos.png" alt="Fundacion Caja Burgos" />
         </div>
         <h1>II Torneo BCF CUP Alevin Femenino<br />Fundacion Caja de Burgos</h1>
