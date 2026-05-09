@@ -146,26 +146,26 @@ async function readRanges(sheets, sheetId, ranges) {
     ranges,
   });
 
+  function normalizedRangeKey(a1Range) {
+    const normalized = String(a1Range || "").replace(/\$/g, "");
+    const [rawSheetPart, cells = ""] = normalized.split("!");
+    const sheetPart = rawSheetPart
+      .replace(/^'/, "")
+      .replace(/'$/, "")
+      .replace(/''/g, "'");
+    const startCell = cells.split(":")[0] || cells;
+    return `${sheetPart}!${startCell}`;
+  }
+
   const valueRanges = response.data.valueRanges || [];
   const map = {};
   for (const valueRange of valueRanges) {
     if (!valueRange?.range) continue;
-    // Google can return expanded A1 ranges (for example B4:I7 -> B4:I1000).
-    // Key by normalized sheet + start cell so requested ranges still match.
-    const normalizedReturnedRange = String(valueRange.range).replace(/\$/g, "");
-    const [sheetPart, returnedCells = ""] = normalizedReturnedRange.split("!");
-    const returnedStartCell = returnedCells.split(":")[0] || returnedCells;
-    const normalizedKey = `${sheetPart}!${returnedStartCell}`;
-    map[normalizedKey] = valueRange.values || [];
+    // Google can return expanded ranges and unquoted sheet names.
+    map[normalizedRangeKey(valueRange.range)] = valueRange.values || [];
   }
 
-  return ranges.map((range) => {
-    const normalizedRequestedRange = String(range).replace(/\$/g, "");
-    const [sheetPart, requestedCells = ""] = normalizedRequestedRange.split("!");
-    const requestedStartCell = requestedCells.split(":")[0] || requestedCells;
-    const normalizedKey = `${sheetPart}!${requestedStartCell}`;
-    return map[normalizedKey] || [];
-  });
+  return ranges.map((range) => map[normalizedRangeKey(range)] || []);
 }
 
 async function getGroupData(sheets, sheetId, sheetName) {
@@ -349,6 +349,7 @@ function renderEliminatoriasPage(eliminatoriasData, quarterTitle, semiTitle, fin
     ${quarters}
     <h3 class="section-title">${escapeHtml(semiTitle)}</h3>
     ${semis}
+    <h3 class="section-title">Finales</h3>
     ${finals}
   `;
 }
