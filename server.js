@@ -349,7 +349,6 @@ function renderEliminatoriasPage(eliminatoriasData, quarterTitle, semiTitle, fin
     ${quarters}
     <h3 class="section-title">${escapeHtml(semiTitle)}</h3>
     ${semis}
-    <h3 class="section-title">Finales</h3>
     ${finals}
   `;
 }
