@@ -86,11 +86,11 @@ function teamLogo(teamName) {
     case "Gimnastica Segoviana":
       return "/static/segoviana.png";
     case "CD Vasconia":
-      return "/static/vasconia.jpg";
+      return "/static/vasconia.png";
     case "CD Salamanca FF":
-      return "/static/salamanca.jpg";
+      return "/static/salamanca.png";
     case "Martutene KE":
-      return "/static/martutene.jpg";
+      return "/static/martutene.png";
     case "Real Sociedad":
       return "/static/realsociedad.png";
     default:
