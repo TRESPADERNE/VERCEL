@@ -91,7 +91,7 @@ function teamLogo(teamName) {
     case "Martutene KE":
       return "/static/martutene.jpg";
     case "Real Sociedad":
-      return "/static/sociedad.jpg";
+      return "/static/realsociedad.jpg";
     default:
       return "/static/logo_I_BCF_CUP.png";
   }
