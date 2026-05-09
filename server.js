@@ -16,11 +16,12 @@ const TEAM_ALIAS = {
   "CD Palencia FF": "PAL",
   'Burgos CF "B"': "BURB",
   "Gimnastica Segoviana": "GSEG",
-  "Real Valladolid CF": "RVAL",
+  "Real Valladolid CF": "RVA",
   "CD San Jose": "SJOS",
   "CD Vasconia": "VAS",
   "CD Salamanca FF": "SAL",
   "Martutene KE": "MAR",
+  "Real Sociedad": "RSO",
 };
 
 const TEAM_ALIAS_NORMALIZED = Object.fromEntries(
@@ -91,7 +92,7 @@ function teamLogo(teamName) {
     case "Martutene KE":
       return "/static/martutene.jpg";
     case "Real Sociedad":
-      return "/static/realsociedad.jpg";
+      return "/static/realsociedad.png";
     default:
       return "/static/logo_I_BCF_CUP.png";
   }
