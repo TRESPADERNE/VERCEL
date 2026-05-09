@@ -8,7 +8,7 @@ const CACHE_TTL_MS = 60 * 1000;
 const AUTO_REFRESH_MS = 60 * 1000;
 const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=120";
 
-const TABS = ["Grupo A", "Grupo B", "Fase Oro", "Fase Plata"];
+const TABS = ["Grupo A", "Grupo B", "Eliminatorias"];
 const TEAM_ALIAS = {
   "Burgos CF": "BUR",
   "CD Parquesol": "PAR",
@@ -170,15 +170,20 @@ async function getGroupData(sheets, sheetId, sheetName) {
   return { sheetName, matches, table: { headers, rows } };
 }
 
-async function getFinalData(sheets, sheetId, sheetName) {
-  const [semiRows, semiPenaltiesRows, finalRows, finalPenaltiesRows] = await readRanges(
-    sheets,
-    sheetId,
-    [`'${sheetName}'!B4:I5`, `'${sheetName}'!E9:I10`, `'${sheetName}'!B14:I15`, `'${sheetName}'!E19:I20`]
-  );
+async function getEliminatoriasData(sheets, sheetId, sheetName) {
+  const [quarterRows, quarterPenaltiesRows, semiRows, semiPenaltiesRows, finalRows, finalPenaltiesRows] =
+    await readRanges(sheets, sheetId, [
+      `'${sheetName}'!B4:I7`,
+      `'${sheetName}'!E11:I14`,
+      `'${sheetName}'!B18:I19`,
+      `'${sheetName}'!E23:I24`,
+      `'${sheetName}'!B28:I29`,
+      `'${sheetName}'!E33:I34`,
+    ]);
 
   return {
     sheetName,
+    quarters: quarterRows.map((row, index) => rowToMatch(row, quarterPenaltiesRows[index] || [])),
     semis: semiRows.map((row, index) => rowToMatch(row, semiPenaltiesRows[index] || [])),
     finals: finalRows.map((row, index) => rowToMatch(row, finalPenaltiesRows[index] || [])),
   };
@@ -196,19 +201,17 @@ async function getTournamentData() {
 
   cacheLoadingPromise = (async () => {
     const { sheets, sheetId } = buildGoogleClient();
-    const [groupA, groupB, faseOro, fasePlata] = await Promise.all([
+    const [groupA, groupB, eliminatorias] = await Promise.all([
       getGroupData(sheets, sheetId, "Grupo A"),
       getGroupData(sheets, sheetId, "Grupo B"),
-      getFinalData(sheets, sheetId, "Fase Oro"),
-      getFinalData(sheets, sheetId, "Fase Plata"),
+      getEliminatoriasData(sheets, sheetId, "Eliminatorias"),
     ]);
 
     const data = {
       generatedAt: new Date(),
       groupA,
       groupB,
-      faseOro,
-      fasePlata,
+      eliminatorias,
     };
 
     cache = {
@@ -313,12 +316,15 @@ function renderGroupPage(group) {
   `;
 }
 
-function renderFinalPage(finalData, semiTitle, finalTitle, thirdTitle) {
-  const semis = finalData.semis?.length
-    ? finalData.semis.map((match) => renderMatchCard(match)).join("")
+function renderEliminatoriasPage(eliminatoriasData, quarterTitle, semiTitle, finalTitle, thirdTitle) {
+  const quarters = eliminatoriasData.quarters?.length
+    ? eliminatoriasData.quarters.map((match) => renderMatchCard(match)).join("")
+    : '<p class="empty">No hay cuartos de final para mostrar.</p>';
+  const semis = eliminatoriasData.semis?.length
+    ? eliminatoriasData.semis.map((match) => renderMatchCard(match)).join("")
     : '<p class="empty">No hay semifinales para mostrar.</p>';
-  const finals = finalData.finals?.length
-    ? finalData.finals
+  const finals = eliminatoriasData.finals?.length
+    ? eliminatoriasData.finals
         .map((match, index) => {
           const title = index === 0 ? finalTitle : thirdTitle;
           return `<h3 class="section-title">${escapeHtml(title)}</h3>${renderMatchCard(match)}`;
@@ -327,6 +333,8 @@ function renderFinalPage(finalData, semiTitle, finalTitle, thirdTitle) {
     : '<p class="empty">No hay finales para mostrar.</p>';
 
   return `
+    <h3 class="section-title">${escapeHtml(quarterTitle)}</h3>
+    ${quarters}
     <h3 class="section-title">${escapeHtml(semiTitle)}</h3>
     ${semis}
     ${finals}
@@ -339,14 +347,13 @@ function renderBodyByTab(data, tab) {
       return renderGroupPage(data.groupA);
     case "Grupo B":
       return renderGroupPage(data.groupB);
-    case "Fase Oro":
-      return renderFinalPage(data.faseOro, "Semifinales", "Final", "Tercer y Cuarto Puesto");
-    case "Fase Plata":
-      return renderFinalPage(
-        data.fasePlata,
-        "Semifinales Fase Plata",
-        "Final Fase Plata",
-        "Tercer y Cuarto Puesto Fase Plata"
+    case "Eliminatorias":
+      return renderEliminatoriasPage(
+        data.eliminatorias,
+        "Cuartos de Final",
+        "Semifinales",
+        "Final",
+        "Tercer y Cuarto Puesto"
       );
     default:
       return renderGroupPage(data.groupA);
@@ -634,9 +641,9 @@ function renderPage(data, currentTab) {
           padding-bottom: 0;
         }
         .tab-link {
-          flex: 0 0 20%;
-          min-width: 20%;
-          max-width: 20%;
+          flex: 0 0 33.3333%;
+          min-width: 33.3333%;
+          max-width: 33.3333%;
           padding: 0.42rem 0.15rem;
           font-size: 0.72rem;
           white-space: normal;
@@ -695,7 +702,7 @@ function renderPage(data, currentTab) {
         .page { padding: 1.1rem 1rem 1.8rem; }
         .tabs {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           overflow: visible;
           padding-bottom: 0;
         }
