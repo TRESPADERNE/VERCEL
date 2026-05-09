@@ -18,6 +18,9 @@ const TEAM_ALIAS = {
   "Gimnastica Segoviana": "GSEG",
   "Real Valladolid CF": "RVAL",
   "CD San Jose": "SJOS",
+  "CD Vasconia": "VAS",
+  "CD Salamanca FF": "SAL",
+  "Martutene KE": "MAR",
 };
 
 const TEAM_ALIAS_NORMALIZED = Object.fromEntries(
@@ -81,6 +84,14 @@ function teamLogo(teamName) {
       return "/static/sanjose.png";
     case "Gimnastica Segoviana":
       return "/static/segoviana.png";
+    case "CD Vasconia":
+      return "/static/vasconia.jpg";
+    case "CD Salamanca FF":
+      return "/static/salamanca.jpg";
+    case "Martutene KE":
+      return "/static/martutene.jpg";
+    case "Real Sociedad":
+      return "/static/sociedad.jpg";
     default:
       return "/static/logo_I_BCF_CUP.png";
   }
