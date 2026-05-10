@@ -5,7 +5,7 @@ const { google } = require("googleapis");
 
 const app = express();
 const port = process.env.PORT || 3000;
-const CACHE_TTL_MS = 1000 * 1000;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 // const AUTO_REFRESH_MS = 60 * 1000;
 const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=0, must-revalidate";
 const EDGE_CACHE_CONTROL_FORCE = "no-store";
@@ -377,12 +377,10 @@ function renderBodyByTab(data, tab) {
   }
 }
 
-function renderTabs(currentTab, refreshSecret = "") {
+function renderTabs(currentTab) {
   return TABS.map((tab) => {
     const active = tab === currentTab ? " active" : "";
-    return `<a class="tab-link${active}" href="${escapeHtml(buildTabHref(tab, refreshSecret))}">${escapeHtml(
-      tab
-    )}</a>`;
+    return `<a class="tab-link${active}" href="${escapeHtml(buildTabHref(tab))}">${escapeHtml(tab)}</a>`;
   }).join("");
 }
 
@@ -430,16 +428,13 @@ function getValidatedRefreshSecret(req) {
   return provided && provided === REFRESH_SECRET ? provided : "";
 }
 
-function buildTabHref(tab, refreshSecret) {
+function buildTabHref(tab) {
   const params = new URLSearchParams({ tab });
-  if (refreshSecret) {
-    params.set(REFRESH_SECRET_PARAM, refreshSecret);
-  }
   return `/?${params.toString()}`;
 }
 
-function renderPage(data, currentTab, refreshSecret = "") {
-  const currentTabHref = buildTabHref(currentTab, refreshSecret);
+function renderPage(data, currentTab) {
+  const currentTabHref = buildTabHref(currentTab);
   return `<!doctype html>
 <html lang="es">
   <head>
@@ -790,7 +785,7 @@ function renderPage(data, currentTab, refreshSecret = "") {
         </div>
       </header>
 
-      <nav class="tabs" aria-label="Fases del torneo">${renderTabs(currentTab, refreshSecret)}</nav>
+      <nav class="tabs" aria-label="Fases del torneo">${renderTabs(currentTab)}</nav>
       <section id="tab-content">${renderBodyByTab(data, currentTab)}</section>
 
       <footer class="sponsors">
@@ -857,7 +852,7 @@ app.get("/", async (req, res) => {
       res.set("Cache-Control", cacheControl);
     }
 
-    res.status(200).send(renderPage(data, currentTab, refreshSecret));
+    res.status(200).send(renderPage(data, currentTab));
   } catch (error) {
     console.error(error);
     res.status(500).send(`
