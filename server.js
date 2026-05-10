@@ -1,10 +1,11 @@
 const express = require("express");
 const path = require("path");
+const crypto = require("crypto");
 const { google } = require("googleapis");
 
 const app = express();
 const port = process.env.PORT || 3000;
-const CACHE_TTL_MS = 60 * 1000;
+const CACHE_TTL_MS = 1000 * 1000;
 // const AUTO_REFRESH_MS = 60 * 1000;
 const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=0, must-revalidate";
 const EDGE_CACHE_CONTROL_FORCE = "no-store";
@@ -391,6 +392,31 @@ function formatDate(date) {
     timeStyle: "short",
     timeZone: "Europe/Madrid",
   }).format(date);
+}
+
+function buildEtag(value) {
+  const hash = crypto.createHash("sha1").update(String(value)).digest("hex");
+  return `"${hash}"`;
+}
+
+function isNotModified(req, res, etag, cacheControl) {
+  res.set("Cache-Control", cacheControl);
+  res.set("ETag", etag);
+
+  const ifNoneMatch = String(req.headers["if-none-match"] || "");
+  if (!ifNoneMatch) return false;
+
+  const normalized = ifNoneMatch
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (normalized.includes(etag) || normalized.includes("*")) {
+    res.status(304).end();
+    return true;
+  }
+
+  return false;
 }
 
 function getCurrentTabFromReq(req) {
@@ -791,7 +817,17 @@ app.get("/api/data", async (req, res) => {
 
   try {
     const data = await getTournamentData({ forceRefresh: Boolean(refreshSecret) });
-    res.set("Cache-Control", refreshSecret ? EDGE_CACHE_CONTROL_FORCE : EDGE_CACHE_CONTROL);
+    const cacheControl = refreshSecret ? EDGE_CACHE_CONTROL_FORCE : EDGE_CACHE_CONTROL;
+
+    if (!refreshSecret) {
+      const etag = buildEtag(`${currentTab}|${new Date(data.generatedAt).toISOString()}`);
+      if (isNotModified(req, res, etag, cacheControl)) {
+        return;
+      }
+    } else {
+      res.set("Cache-Control", cacheControl);
+    }
+
     res.status(200).json({
       generatedAt: data.generatedAt,
       generatedAtFormatted: formatDate(data.generatedAt),
@@ -810,7 +846,17 @@ app.get("/", async (req, res) => {
 
   try {
     const data = await getTournamentData({ forceRefresh: Boolean(refreshSecret) });
-    res.set("Cache-Control", refreshSecret ? EDGE_CACHE_CONTROL_FORCE : EDGE_CACHE_CONTROL);
+    const cacheControl = refreshSecret ? EDGE_CACHE_CONTROL_FORCE : EDGE_CACHE_CONTROL;
+
+    if (!refreshSecret) {
+      const etag = buildEtag(`${currentTab}|${new Date(data.generatedAt).toISOString()}`);
+      if (isNotModified(req, res, etag, cacheControl)) {
+        return;
+      }
+    } else {
+      res.set("Cache-Control", cacheControl);
+    }
+
     res.status(200).send(renderPage(data, currentTab, refreshSecret));
   } catch (error) {
     console.error(error);
