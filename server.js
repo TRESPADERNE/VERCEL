@@ -297,7 +297,7 @@ async function getTournamentData(options = {}) {
       return persistedData;
     }
 
-    const error = new Error("No hay datos cacheados. Ejecuta ?autorefresh para cargar Google Sheets.");
+    const error = new Error("No hay datos cacheados.");
     error.statusCode = 503;
     throw error;
   }
@@ -999,6 +999,11 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
         setInterval(() => {
           checkVersion().catch(() => {});
         }, pollMs);
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") {
+            checkVersion().catch(() => {});
+          }
+        });
       })();
     </script>
   </body>
@@ -1070,6 +1075,11 @@ function renderLoadingErrorPage(message) {
         setInterval(() => {
           checkVersion().catch(() => {});
         }, pollMs);
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") {
+            checkVersion().catch(() => {});
+          }
+        });
         checkVersion().catch(() => {});
       })();
     </script>
