@@ -128,6 +128,11 @@ function getRedisEnv() {
   return { url, token };
 }
 
+function hasRedisConfig() {
+  const { url, token } = getRedisEnv();
+  return Boolean(url && token);
+}
+
 async function getRedis() {
   const { url, token } = getRedisEnv();
   if (!url || !token) return null;
@@ -278,6 +283,17 @@ async function getEliminatoriasData(sheets, sheetId, sheetName) {
 async function getTournamentData(options = {}) {
   const { forceRefresh = false } = options;
   const now = Date.now();
+  if (!forceRefresh && cacheLoadingPromise) {
+    return cacheLoadingPromise;
+  }
+
+  if (!forceRefresh && hasRedisConfig()) {
+    const persistedData = await loadPersistedTournamentData();
+    if (persistedData) {
+      return persistedData;
+    }
+  }
+
   if (!forceRefresh && cache.data) {
     const ageMs = now - cache.fetchedAt;
     if (MANUAL_REFRESH_ONLY) {
@@ -288,15 +304,6 @@ async function getTournamentData(options = {}) {
   }
 
   if (!forceRefresh && MANUAL_REFRESH_ONLY) {
-    if (cacheLoadingPromise) {
-      return cacheLoadingPromise;
-    }
-
-    const persistedData = await loadPersistedTournamentData();
-    if (persistedData) {
-      return persistedData;
-    }
-
     const error = new Error("No hay datos cacheados.");
     error.statusCode = 503;
     throw error;
@@ -521,12 +528,12 @@ function isNotModified(req, res, etag, cacheControl) {
 }
 
 async function getCachedVersion() {
-  if (cache.data) return new Date(cache.data.generatedAt).toISOString();
-
   const redis = await getRedis();
-  if (!redis) return "";
+  if (redis) {
+    return (await redis.get(REDIS_VERSION_KEY)) || "";
+  }
 
-  return (await redis.get(REDIS_VERSION_KEY)) || "";
+  return cache.data ? new Date(cache.data.generatedAt).toISOString() : "";
 }
 
 function getCurrentTabFromReq(req) {
@@ -926,7 +933,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
         <h1>II Torneo BCF CUP Alevin Femenino<br />Fundacion Caja de Burgos</h1>
         <div class="toolbar">
           <span id="last-updated">Ultima consulta: ${escapeHtml(formatDate(data.generatedAt))}</span>
-          <a class="refresh" href="${escapeHtml(currentTabHref)}">Actualizar</a>
+          <!-- <a class="refresh" href="${escapeHtml(currentTabHref)}">Actualizar</a> -->
         </div>
         ${refreshDoneHtml}
       </header>
