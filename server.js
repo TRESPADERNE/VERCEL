@@ -6,11 +6,13 @@ const { google } = require("googleapis");
 const app = express();
 const port = process.env.PORT || 3000;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const MANUAL_REFRESH_ONLY = true;
 // const AUTO_REFRESH_MS = 60 * 1000;
 const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=0, must-revalidate";
 const EDGE_CACHE_CONTROL_FORCE = "no-store";
 const REFRESH_SECRET_PARAM = "autorefresh";
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "";
+const REFRESH_DONE_PARAM = "refreshDoneAt";
 
 const TABS = ["Grupo A", "Grupo B", "Eliminatorias"];
 const TEAM_ALIAS = {
@@ -208,8 +210,13 @@ async function getEliminatoriasData(sheets, sheetId, sheetName) {
 async function getTournamentData(options = {}) {
   const { forceRefresh = false } = options;
   const now = Date.now();
-  if (!forceRefresh && cache.data && now - cache.fetchedAt < CACHE_TTL_MS) {
-    return cache.data;
+  if (!forceRefresh && cache.data) {
+    if (MANUAL_REFRESH_ONLY) {
+      return cache.data;
+    }
+    if (now - cache.fetchedAt < CACHE_TTL_MS) {
+      return cache.data;
+    }
   }
 
   if (cacheLoadingPromise) {
@@ -433,8 +440,20 @@ function buildTabHref(tab) {
   return `/?${params.toString()}`;
 }
 
-function renderPage(data, currentTab) {
+function getRefreshDoneDate(req) {
+  const raw = String(req.query[REFRESH_DONE_PARAM] || "").trim();
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function renderPage(data, currentTab, refreshDoneDate = null) {
   const currentTabHref = buildTabHref(currentTab);
+  const refreshDoneHtml = refreshDoneDate
+    ? `<div class="refresh-done">Actualizacion forzada ejecutada: ${escapeHtml(formatDate(
+        refreshDoneDate
+      ))}</div>`
+    : "";
   return `<!doctype html>
 <html lang="es">
   <head>
@@ -510,6 +529,17 @@ function renderPage(data, currentTab) {
         border-radius: 999px;
         padding: 0.3rem 0.75rem;
         font-weight: 600;
+      }
+      .refresh-done {
+        margin-top: 0.55rem;
+        padding: 0.42rem 0.6rem;
+        border: 1px solid #b8dfc7;
+        background: #eef9f1;
+        color: #1f6a39;
+        border-radius: 10px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-align: center;
       }
       .tabs {
         display: flex;
@@ -783,6 +813,7 @@ function renderPage(data, currentTab) {
           <span id="last-updated">Ultima consulta: ${escapeHtml(formatDate(data.generatedAt))}</span>
           <a class="refresh" href="${escapeHtml(currentTabHref)}">Actualizar</a>
         </div>
+        ${refreshDoneHtml}
       </header>
 
       <nav class="tabs" aria-label="Fases del torneo">${renderTabs(currentTab)}</nav>
@@ -838,21 +869,29 @@ app.get("/api/data", async (req, res) => {
 app.get("/", async (req, res) => {
   const currentTab = getCurrentTabFromReq(req);
   const refreshSecret = getValidatedRefreshSecret(req);
+  const refreshDoneDate = getRefreshDoneDate(req);
 
   try {
-    const data = await getTournamentData({ forceRefresh: Boolean(refreshSecret) });
-    const cacheControl = refreshSecret ? EDGE_CACHE_CONTROL_FORCE : EDGE_CACHE_CONTROL;
-
-    if (!refreshSecret) {
-      const etag = buildEtag(`${currentTab}|${new Date(data.generatedAt).toISOString()}`);
-      if (isNotModified(req, res, etag, cacheControl)) {
-        return;
-      }
-    } else {
-      res.set("Cache-Control", cacheControl);
+    if (refreshSecret) {
+      const data = await getTournamentData({ forceRefresh: true });
+      const params = new URLSearchParams({
+        tab: currentTab,
+        [REFRESH_DONE_PARAM]: new Date(data.generatedAt).toISOString(),
+      });
+      res.set("Cache-Control", EDGE_CACHE_CONTROL_FORCE);
+      res.redirect(303, `/?${params.toString()}`);
+      return;
     }
 
-    res.status(200).send(renderPage(data, currentTab));
+    const data = await getTournamentData({ forceRefresh: false });
+    const cacheControl = EDGE_CACHE_CONTROL;
+
+    const etag = buildEtag(`${currentTab}|${new Date(data.generatedAt).toISOString()}`);
+    if (isNotModified(req, res, etag, cacheControl)) {
+      return;
+    }
+
+    res.status(200).send(renderPage(data, currentTab, refreshDoneDate));
   } catch (error) {
     console.error(error);
     res.status(500).send(`
