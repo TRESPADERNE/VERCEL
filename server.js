@@ -8,6 +8,10 @@ const port = process.env.PORT || 3000;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const MANUAL_REFRESH_ONLY = true;
 const VERSION_POLL_MS = 60 * 1000;
+const VERSION_POLL_FAST_WINDOW_MS = 5 * 60 * 1000;
+const VERSION_POLL_WARM_MS = 2 * 60 * 1000;
+const VERSION_POLL_COOL_MS = 5 * 60 * 1000;
+const VERSION_POLL_IDLE_MS = 10 * 60 * 1000;
 // const AUTO_REFRESH_MS = 60 * 1000;
 const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=0, must-revalidate";
 const EDGE_CACHE_CONTROL_FORCE = "no-store";
@@ -565,6 +569,49 @@ function getRefreshDoneDate(req) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function isMockPreview(req) {
+  return process.env.NODE_ENV !== "production" && String(req.query.mock || "") === "1";
+}
+
+function getMockTournamentData() {
+  const table = {
+    headers: ["POS", "EQUIPO", "PTS", "PJ", "PG", "PE", "PP", "GF", "GC", "DG"],
+    rows: [
+      ["1", "Burgos CF", "6", "2", "2", "0", "0", "5", "1", "4"],
+      ["2", "CD Parquesol", "3", "2", "1", "0", "1", "3", "3", "0"],
+      ["3", "Mullier FCN", "1", "2", "0", "1", "1", "2", "4", "-2"],
+      ["4", "CD Palencia FF", "1", "2", "0", "1", "1", "1", "3", "-2"],
+    ],
+  };
+  const matches = [
+    rowToMatch(["10:00", "", "1", "Burgos CF", "2", "CD Parquesol", "0"]),
+    rowToMatch(["10:45", "", "2", "Mullier FCN", "1", "CD Palencia FF", "1"]),
+    rowToMatch(["11:30", "", "1", "Burgos CF", "3", "Mullier FCN", "1"]),
+    rowToMatch(["12:15", "", "2", "CD Parquesol", "3", "CD Palencia FF", "0"]),
+  ];
+
+  return {
+    generatedAt: new Date(),
+    groupA: { sheetName: "Grupo A", matches, table },
+    groupB: {
+      sheetName: "Grupo B",
+      matches: [
+        rowToMatch(["10:00", "", "1", "Real Valladolid CF", "1", "CD San Jose", "0"]),
+        rowToMatch(["10:45", "", "2", "CD Vasconia", "2", "CD Salamanca FF", "2"]),
+      ],
+      table,
+    },
+    eliminatorias: {
+      sheetName: "Eliminatorias",
+      quarters: [
+        rowToMatch(["16:00", "", "1", "Burgos CF", "1", "CD Salamanca FF", "1"], ["", "4", "", "3"]),
+      ],
+      semis: [rowToMatch(["17:00", "", "1", "Burgos CF", "", "Real Sociedad", ""])],
+      finals: [rowToMatch(["18:30", "", "1", "Burgos CF", "", "Real Valladolid CF", ""])],
+    },
+  };
+}
+
 function renderPage(data, currentTab, refreshDoneDate = null) {
   const currentTabHref = buildTabHref(currentTab);
   const initialVersion = new Date(data.generatedAt).toISOString();
@@ -603,14 +650,20 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
       .page {
         max-width: 980px;
         margin: 0 auto;
-        padding: 0.9rem 0.8rem 1.4rem;
+        padding: 0 0.8rem 1.4rem;
       }
       .header {
-        background: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 0.8rem;
-        box-shadow: 0 8px 20px rgba(10, 35, 66, 0.08);
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        padding: 0;
+        overflow: hidden;
+        box-shadow: none;
+      }
+      .header-banner {
+        display: block;
+        width: 100%;
+        height: auto;
       }
       .header-logos {
         display: flex;
@@ -650,7 +703,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
         font-weight: 600;
       }
       .refresh-done {
-        margin-top: 0.55rem;
+        margin: 0.55rem 0.8rem 0.8rem;
         padding: 0.42rem 0.6rem;
         border: 1px solid #b8dfc7;
         background: #eef9f1;
@@ -838,7 +891,14 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
         text-align: center;
       }
       @media (max-width: 460px) {
-        .page { padding: 0.7rem 0.45rem 1.2rem; }
+        .page { padding: 0 0.45rem 1.2rem; }
+        .header {
+          margin-left: -0.45rem;
+          margin-right: -0.45rem;
+          border-left: 0;
+          border-right: 0;
+          border-radius: 0;
+        }
         .tabs {
           display: flex;
           justify-content: space-between;
@@ -905,7 +965,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
         }
       }
       @media (min-width: 800px) {
-        .page { padding: 1.1rem 1rem 1.8rem; }
+        .page { padding: 0 1rem 1.8rem; }
         .tabs {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -916,7 +976,6 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
           min-width: 0;
           white-space: normal;
         }
-        .header-logos img { height: 80px; }
         h1 { font-size: 1.35rem; }
         .team-name { font-size: 0.95rem; }
         .score { font-size: 1.6rem; }
@@ -926,15 +985,16 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
   <body>
     <main class="page">
       <header class="header">
-        <div class="header-logos">
+        <img class="header-banner" src="/static/cabecera_web.png" alt="II Torneo BCF CUP Alevin Femenino Fundacion Caja de Burgos" />
+        <!-- <div class="header-logos">
           <img src="/static/logo_II_BCF_CUP.png" alt="Logo BCF CUP" />
           <img src="/static/logoFundacionCajaBurgos.png" alt="Fundacion Caja Burgos" />
         </div>
-        <h1>II Torneo BCF CUP Alevin Femenino<br />Fundacion Caja de Burgos</h1>
-        <div class="toolbar">
-          <span id="last-updated">Ultima consulta: ${escapeHtml(formatDate(data.generatedAt))}</span>
-          <!-- <a class="refresh" href="${escapeHtml(currentTabHref)}">Actualizar</a> -->
-        </div>
+        <h1>II Torneo BCF CUP Alevin Femenino<br />Fundacion Caja de Burgos</h1> -->
+        <!-- <div class="toolbar">
+          <span id="last-updated">Ultima actualizacion: ${escapeHtml(formatDate(data.generatedAt))}</span>
+          <a class="refresh" href="${escapeHtml(currentTabHref)}">Actualizar</a>
+        </div> -->
         ${refreshDoneHtml}
       </header>
 
@@ -983,7 +1043,30 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
 
       (function syncWhenDataChanges() {
         const pollMs = ${VERSION_POLL_MS};
+        const fastWindowMs = ${VERSION_POLL_FAST_WINDOW_MS};
+        const warmPollMs = ${VERSION_POLL_WARM_MS};
+        const coolPollMs = ${VERSION_POLL_COOL_MS};
+        const idlePollMs = ${VERSION_POLL_IDLE_MS};
         let currentVersion = "${escapeHtml(initialVersion)}";
+        let visibleSince = Date.now();
+        let pollTimer = null;
+
+        function nextPollDelay() {
+          const visibleForMs = Date.now() - visibleSince;
+          if (visibleForMs < fastWindowMs) return pollMs;
+          if (visibleForMs < 15 * 60 * 1000) return warmPollMs;
+          if (visibleForMs < 30 * 60 * 1000) return coolPollMs;
+          return idlePollMs;
+        }
+
+        function scheduleNextCheck() {
+          window.clearTimeout(pollTimer);
+          if (document.visibilityState !== "visible") return;
+
+          pollTimer = window.setTimeout(() => {
+            checkVersion().catch(() => {}).finally(scheduleNextCheck);
+          }, nextPollDelay());
+        }
 
         async function checkVersion() {
           if (document.visibilityState !== "visible") return;
@@ -1003,12 +1086,13 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
           }
         }
 
-        setInterval(() => {
-          checkVersion().catch(() => {});
-        }, pollMs);
+        scheduleNextCheck();
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") {
-            checkVersion().catch(() => {});
+            visibleSince = Date.now();
+            checkVersion().catch(() => {}).finally(scheduleNextCheck);
+          } else {
+            window.clearTimeout(pollTimer);
           }
         });
       })();
@@ -1063,6 +1147,29 @@ function renderLoadingErrorPage(message) {
     <script>
       (function reloadWhenDataIsAvailable() {
         const pollMs = ${VERSION_POLL_MS};
+        const fastWindowMs = ${VERSION_POLL_FAST_WINDOW_MS};
+        const warmPollMs = ${VERSION_POLL_WARM_MS};
+        const coolPollMs = ${VERSION_POLL_COOL_MS};
+        const idlePollMs = ${VERSION_POLL_IDLE_MS};
+        let visibleSince = Date.now();
+        let pollTimer = null;
+
+        function nextPollDelay() {
+          const visibleForMs = Date.now() - visibleSince;
+          if (visibleForMs < fastWindowMs) return pollMs;
+          if (visibleForMs < 15 * 60 * 1000) return warmPollMs;
+          if (visibleForMs < 30 * 60 * 1000) return coolPollMs;
+          return idlePollMs;
+        }
+
+        function scheduleNextCheck() {
+          window.clearTimeout(pollTimer);
+          if (document.visibilityState !== "visible") return;
+
+          pollTimer = window.setTimeout(() => {
+            checkVersion().catch(() => {}).finally(scheduleNextCheck);
+          }, nextPollDelay());
+        }
 
         async function checkVersion() {
           if (document.visibilityState !== "visible") return;
@@ -1079,15 +1186,16 @@ function renderLoadingErrorPage(message) {
           }
         }
 
-        setInterval(() => {
-          checkVersion().catch(() => {});
-        }, pollMs);
+        scheduleNextCheck();
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") {
-            checkVersion().catch(() => {});
+            visibleSince = Date.now();
+            checkVersion().catch(() => {}).finally(scheduleNextCheck);
+          } else {
+            window.clearTimeout(pollTimer);
           }
         });
-        checkVersion().catch(() => {});
+        checkVersion().catch(() => {}).finally(scheduleNextCheck);
       })();
     </script>
   </body>
@@ -1158,6 +1266,12 @@ app.get("/", async (req, res) => {
   const refreshDoneDate = getRefreshDoneDate(req);
 
   try {
+    if (isMockPreview(req)) {
+      res.set("Cache-Control", EDGE_CACHE_CONTROL_FORCE);
+      res.status(200).send(renderPage(getMockTournamentData(), currentTab, refreshDoneDate));
+      return;
+    }
+
     if (hasRefreshParam(req) && !refreshSecret) {
       res.set("Cache-Control", EDGE_CACHE_CONTROL_FORCE);
       res.status(403).send(renderLoadingErrorPage("Parametro autorefresh no autorizado."));
