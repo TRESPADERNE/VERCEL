@@ -8,6 +8,7 @@ const port = process.env.PORT || 3000;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const MANUAL_REFRESH_ONLY = true;
 const MANUAL_MAX_STALE_MS = 2 * 60 * 1000;
+const VERSION_POLL_MS = 60 * 1000;
 // const AUTO_REFRESH_MS = 60 * 1000;
 const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=0, must-revalidate";
 const EDGE_CACHE_CONTROL_FORCE = "no-store";
@@ -465,6 +466,7 @@ function getRefreshDoneDate(req) {
 
 function renderPage(data, currentTab, refreshDoneDate = null) {
   const currentTabHref = buildTabHref(currentTab);
+  const initialVersion = new Date(data.generatedAt).toISOString();
   const refreshDoneHtml = refreshDoneDate
     ? `<div class="refresh-done">Actualizacion forzada ejecutada: ${escapeHtml(formatDate(
         refreshDoneDate
@@ -877,6 +879,33 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
           });
         });
       })();
+
+      (function syncWhenDataChanges() {
+        const pollMs = ${VERSION_POLL_MS};
+        let currentVersion = "${escapeHtml(initialVersion)}";
+
+        async function checkVersion() {
+          if (document.visibilityState !== "visible") return;
+
+          const response = await fetch("/api/version", {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          });
+          if (!response.ok) return;
+
+          const payload = await response.json();
+          if (!payload || typeof payload.version !== "string") return;
+
+          if (payload.version !== currentVersion) {
+            window.location.reload();
+            return;
+          }
+        }
+
+        setInterval(() => {
+          checkVersion().catch(() => {});
+        }, pollMs);
+      })();
     </script>
   </body>
 </html>`;
@@ -912,6 +941,20 @@ app.get("/api/data", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error al cargar datos" });
+  }
+});
+
+app.get("/api/version", async (_req, res) => {
+  try {
+    const data = await getTournamentData({ forceRefresh: false });
+    res.set("Cache-Control", EDGE_CACHE_CONTROL);
+    res.status(200).json({
+      version: new Date(data.generatedAt).toISOString(),
+      generatedAtFormatted: formatDate(data.generatedAt),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al cargar version" });
   }
 });
 
