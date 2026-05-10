@@ -7,6 +7,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const MANUAL_REFRESH_ONLY = true;
+const MANUAL_MAX_STALE_MS = 2 * 60 * 1000;
 // const AUTO_REFRESH_MS = 60 * 1000;
 const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=0, must-revalidate";
 const EDGE_CACHE_CONTROL_FORCE = "no-store";
@@ -211,10 +212,12 @@ async function getTournamentData(options = {}) {
   const { forceRefresh = false } = options;
   const now = Date.now();
   if (!forceRefresh && cache.data) {
+    const ageMs = now - cache.fetchedAt;
     if (MANUAL_REFRESH_ONLY) {
-      return cache.data;
-    }
-    if (now - cache.fetchedAt < CACHE_TTL_MS) {
+      if (ageMs < MANUAL_MAX_STALE_MS) {
+        return cache.data;
+      }
+    } else if (ageMs < CACHE_TTL_MS) {
       return cache.data;
     }
   }
