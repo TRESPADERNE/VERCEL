@@ -5,8 +5,11 @@ const { google } = require("googleapis");
 const app = express();
 const port = process.env.PORT || 3000;
 const CACHE_TTL_MS = 60 * 1000;
-const AUTO_REFRESH_MS = 60 * 1000;
-const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=120";
+// const AUTO_REFRESH_MS = 60 * 1000;
+const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=0, must-revalidate";
+const EDGE_CACHE_CONTROL_FORCE = "no-store";
+const REFRESH_SECRET_PARAM = "autorefresh";
+const REFRESH_SECRET = process.env.REFRESH_SECRET || "";
 
 const TABS = ["Grupo A", "Grupo B", "Eliminatorias"];
 const TEAM_ALIAS = {
@@ -201,9 +204,10 @@ async function getEliminatoriasData(sheets, sheetId, sheetName) {
   };
 }
 
-async function getTournamentData() {
+async function getTournamentData(options = {}) {
+  const { forceRefresh = false } = options;
   const now = Date.now();
-  if (cache.data && now - cache.fetchedAt < CACHE_TTL_MS) {
+  if (!forceRefresh && cache.data && now - cache.fetchedAt < CACHE_TTL_MS) {
     return cache.data;
   }
 
@@ -372,10 +376,12 @@ function renderBodyByTab(data, tab) {
   }
 }
 
-function renderTabs(currentTab) {
+function renderTabs(currentTab, refreshSecret = "") {
   return TABS.map((tab) => {
     const active = tab === currentTab ? " active" : "";
-    return `<a class="tab-link${active}" href="/?tab=${encodeURIComponent(tab)}">${escapeHtml(tab)}</a>`;
+    return `<a class="tab-link${active}" href="${escapeHtml(buildTabHref(tab, refreshSecret))}">${escapeHtml(
+      tab
+    )}</a>`;
   }).join("");
 }
 
@@ -392,7 +398,22 @@ function getCurrentTabFromReq(req) {
   return TABS.includes(requestedTab) ? requestedTab : "Grupo A";
 }
 
-function renderPage(data, currentTab) {
+function getValidatedRefreshSecret(req) {
+  if (!REFRESH_SECRET) return "";
+  const provided = String(req.query[REFRESH_SECRET_PARAM] || "").trim();
+  return provided && provided === REFRESH_SECRET ? provided : "";
+}
+
+function buildTabHref(tab, refreshSecret) {
+  const params = new URLSearchParams({ tab });
+  if (refreshSecret) {
+    params.set(REFRESH_SECRET_PARAM, refreshSecret);
+  }
+  return `/?${params.toString()}`;
+}
+
+function renderPage(data, currentTab, refreshSecret = "") {
+  const currentTabHref = buildTabHref(currentTab, refreshSecret);
   return `<!doctype html>
 <html lang="es">
   <head>
@@ -739,11 +760,11 @@ function renderPage(data, currentTab) {
         <h1>II Torneo BCF CUP Alevin Femenino<br />Fundacion Caja de Burgos</h1>
         <div class="toolbar">
           <span id="last-updated">Ultima consulta: ${escapeHtml(formatDate(data.generatedAt))}</span>
-          <a class="refresh" href="/?tab=${encodeURIComponent(currentTab)}">Actualizar</a>
+          <a class="refresh" href="${escapeHtml(currentTabHref)}">Actualizar</a>
         </div>
       </header>
 
-      <nav class="tabs" aria-label="Fases del torneo">${renderTabs(currentTab)}</nav>
+      <nav class="tabs" aria-label="Fases del torneo">${renderTabs(currentTab, refreshSecret)}</nav>
       <section id="tab-content">${renderBodyByTab(data, currentTab)}</section>
 
       <footer class="sponsors">
@@ -756,36 +777,6 @@ function renderPage(data, currentTab) {
         </div>
       </footer>
     </main>
-    <script>
-      (function autoRefresh() {
-        const refreshMs = ${AUTO_REFRESH_MS};
-        const tabContent = document.getElementById("tab-content");
-        const lastUpdated = document.getElementById("last-updated");
-
-        async function updateData() {
-          if (document.visibilityState !== "visible") return;
-
-          const params = new URLSearchParams(window.location.search);
-          const tab = params.get("tab") || "Grupo A";
-          const response = await fetch("/api/data?tab=" + encodeURIComponent(tab), {
-            headers: { Accept: "application/json" },
-          });
-          if (!response.ok) return;
-
-          const payload = await response.json();
-          if (tabContent && typeof payload.bodyHtml === "string") {
-            tabContent.innerHTML = payload.bodyHtml;
-          }
-          if (lastUpdated && typeof payload.generatedAtFormatted === "string") {
-            lastUpdated.textContent = "Ultima consulta: " + payload.generatedAtFormatted;
-          }
-        }
-
-        setInterval(() => {
-          updateData().catch(() => {});
-        }, refreshMs);
-      })();
-    </script>
   </body>
 </html>`;
 }
@@ -796,10 +787,11 @@ app.get("/health", (_req, res) => {
 
 app.get("/api/data", async (req, res) => {
   const currentTab = getCurrentTabFromReq(req);
+  const refreshSecret = getValidatedRefreshSecret(req);
 
   try {
-    const data = await getTournamentData();
-    res.set("Cache-Control", EDGE_CACHE_CONTROL);
+    const data = await getTournamentData({ forceRefresh: Boolean(refreshSecret) });
+    res.set("Cache-Control", refreshSecret ? EDGE_CACHE_CONTROL_FORCE : EDGE_CACHE_CONTROL);
     res.status(200).json({
       generatedAt: data.generatedAt,
       generatedAtFormatted: formatDate(data.generatedAt),
@@ -814,11 +806,12 @@ app.get("/api/data", async (req, res) => {
 
 app.get("/", async (req, res) => {
   const currentTab = getCurrentTabFromReq(req);
+  const refreshSecret = getValidatedRefreshSecret(req);
 
   try {
-    const data = await getTournamentData();
-    res.set("Cache-Control", EDGE_CACHE_CONTROL);
-    res.status(200).send(renderPage(data, currentTab));
+    const data = await getTournamentData({ forceRefresh: Boolean(refreshSecret) });
+    res.set("Cache-Control", refreshSecret ? EDGE_CACHE_CONTROL_FORCE : EDGE_CACHE_CONTROL);
+    res.status(200).send(renderPage(data, currentTab, refreshSecret));
   } catch (error) {
     console.error(error);
     res.status(500).send(`
