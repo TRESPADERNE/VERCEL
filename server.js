@@ -15,6 +15,8 @@ const VERSION_CACHE_CONTROL = "private, max-age=0, must-revalidate";
 const REFRESH_SECRET_PARAM = "autorefresh";
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "";
 const REFRESH_DONE_PARAM = "refreshDoneAt";
+const REDIS_DATA_KEY = "bcf-cup:data";
+const REDIS_VERSION_KEY = "bcf-cup:version";
 
 const TABS = ["Grupo A", "Grupo B", "Eliminatorias"];
 const TEAM_ALIAS = {
@@ -44,6 +46,7 @@ let cache = {
   fetchedAt: 0,
 };
 let cacheLoadingPromise = null;
+let redisPromise = null;
 
 app.use("/static", express.static(path.join(__dirname, "static")));
 
@@ -104,6 +107,69 @@ function teamLogo(teamName) {
     default:
       return "/static/logo_II_BCF_CUP.png";
   }
+}
+
+function getRedisEnv() {
+  const url =
+    process.env.KV_REST_API_URL ||
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.STORAGE_REST_URL ||
+    process.env.STORAGE_URL ||
+    process.env.STORAGE_REDIS_REST_URL ||
+    "";
+  const token =
+    process.env.KV_REST_API_TOKEN ||
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.STORAGE_REST_TOKEN ||
+    process.env.STORAGE_TOKEN ||
+    process.env.STORAGE_REDIS_REST_TOKEN ||
+    "";
+
+  return { url, token };
+}
+
+async function getRedis() {
+  const { url, token } = getRedisEnv();
+  if (!url || !token) return null;
+
+  if (!redisPromise) {
+    redisPromise = import("@upstash/redis").then(({ Redis }) => {
+      return new Redis({
+        url,
+        token,
+      });
+    });
+  }
+
+  return redisPromise;
+}
+
+function rememberTournamentData(data) {
+  cache = {
+    data,
+    fetchedAt: Date.now(),
+  };
+}
+
+async function loadPersistedTournamentData() {
+  const redis = await getRedis();
+  if (!redis) return null;
+
+  const data = await redis.get(REDIS_DATA_KEY);
+  if (!data) return null;
+
+  rememberTournamentData(data);
+  return data;
+}
+
+async function saveTournamentData(data) {
+  rememberTournamentData(data);
+
+  const redis = await getRedis();
+  if (!redis) return;
+
+  const version = new Date(data.generatedAt).toISOString();
+  await redis.pipeline().set(REDIS_DATA_KEY, data).set(REDIS_VERSION_KEY, version).exec();
 }
 
 function buildGoogleClient() {
@@ -226,6 +292,11 @@ async function getTournamentData(options = {}) {
       return cacheLoadingPromise;
     }
 
+    const persistedData = await loadPersistedTournamentData();
+    if (persistedData) {
+      return persistedData;
+    }
+
     const error = new Error("No hay datos cacheados. Ejecuta ?autorefresh para cargar Google Sheets.");
     error.statusCode = 503;
     throw error;
@@ -250,10 +321,7 @@ async function getTournamentData(options = {}) {
       eliminatorias,
     };
 
-    cache = {
-      data,
-      fetchedAt: Date.now(),
-    };
+    await saveTournamentData(data);
     return data;
   })();
 
@@ -417,11 +485,14 @@ function renderTabs(currentTab) {
 }
 
 function formatDate(date) {
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) return "";
+
   return new Intl.DateTimeFormat("es-ES", {
     dateStyle: "short",
     timeStyle: "short",
     timeZone: "Europe/Madrid",
-  }).format(date);
+  }).format(parsedDate);
 }
 
 function buildEtag(value) {
@@ -449,8 +520,13 @@ function isNotModified(req, res, etag, cacheControl) {
   return false;
 }
 
-function getCachedVersion() {
-  return cache.data ? new Date(cache.data.generatedAt).toISOString() : "";
+async function getCachedVersion() {
+  if (cache.data) return new Date(cache.data.generatedAt).toISOString();
+
+  const redis = await getRedis();
+  if (!redis) return "";
+
+  return (await redis.get(REDIS_VERSION_KEY)) || "";
 }
 
 function getCurrentTabFromReq(req) {
@@ -458,9 +534,12 @@ function getCurrentTabFromReq(req) {
   return TABS.includes(requestedTab) ? requestedTab : "Grupo A";
 }
 
+function hasRefreshParam(req) {
+  return Object.prototype.hasOwnProperty.call(req.query, REFRESH_SECRET_PARAM);
+}
+
 function getValidatedRefreshSecret(req) {
-  const hasRefreshParam = Object.prototype.hasOwnProperty.call(req.query, REFRESH_SECRET_PARAM);
-  if (!hasRefreshParam) return "";
+  if (!hasRefreshParam(req)) return "";
   if (!REFRESH_SECRET) return "manual-refresh";
 
   const provided = String(req.query[REFRESH_SECRET_PARAM] || "").trim();
@@ -926,6 +1005,78 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
 </html>`;
 }
 
+function renderLoadingErrorPage(message) {
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BCF CUP Alevin Femenino</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: #1a2d46;
+        background: #f4f7fb;
+      }
+      main {
+        width: min(100%, 520px);
+        text-align: center;
+        background: #fff;
+        border: 1px solid #dce4ef;
+        border-radius: 12px;
+        padding: 1.2rem;
+      }
+      h1 {
+        margin: 0 0 0.65rem;
+        color: #003b7a;
+        font-size: 1.2rem;
+      }
+      p {
+        margin: 0.4rem 0;
+        color: #5b6d82;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Error al cargar los datos</h1>
+      <p>${escapeHtml(message)}</p>
+      <p>Esperando una actualizacion desde el servidor.</p>
+    </main>
+    <script>
+      (function reloadWhenDataIsAvailable() {
+        const pollMs = ${VERSION_POLL_MS};
+
+        async function checkVersion() {
+          if (document.visibilityState !== "visible") return;
+
+          const response = await fetch("/api/version", {
+            headers: { Accept: "application/json" },
+            cache: "no-cache",
+          });
+          if (!response.ok) return;
+
+          const payload = await response.json();
+          if (payload && typeof payload.version === "string" && payload.version) {
+            window.location.reload();
+          }
+        }
+
+        setInterval(() => {
+          checkVersion().catch(() => {});
+        }, pollMs);
+        checkVersion().catch(() => {});
+      })();
+    </script>
+  </body>
+</html>`;
+}
+
 app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
 });
@@ -935,6 +1086,12 @@ app.get("/api/data", async (req, res) => {
   const refreshSecret = getValidatedRefreshSecret(req);
 
   try {
+    if (hasRefreshParam(req) && !refreshSecret) {
+      res.set("Cache-Control", EDGE_CACHE_CONTROL_FORCE);
+      res.status(403).json({ error: "Parametro autorefresh no autorizado" });
+      return;
+    }
+
     const data = await getTournamentData({ forceRefresh: Boolean(refreshSecret) });
     const cacheControl = refreshSecret ? EDGE_CACHE_CONTROL_FORCE : EDGE_CACHE_CONTROL;
 
@@ -955,13 +1112,14 @@ app.get("/api/data", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    res.set("Cache-Control", EDGE_CACHE_CONTROL_FORCE);
     res.status(error.statusCode || 500).json({ error: "Error al cargar datos" });
   }
 });
 
-app.get("/api/version", (req, res) => {
+app.get("/api/version", async (req, res) => {
   try {
-    const version = getCachedVersion();
+    const version = await getCachedVersion();
     const etag = buildEtag(version || "no-data");
     if (isNotModified(req, res, etag, VERSION_CACHE_CONTROL)) {
       return;
@@ -969,7 +1127,7 @@ app.get("/api/version", (req, res) => {
 
     res.status(200).json({
       version,
-      generatedAtFormatted: cache.data ? formatDate(cache.data.generatedAt) : "",
+      generatedAtFormatted: version ? formatDate(version) : "",
     });
   } catch (error) {
     console.error(error);
@@ -983,6 +1141,12 @@ app.get("/", async (req, res) => {
   const refreshDoneDate = getRefreshDoneDate(req);
 
   try {
+    if (hasRefreshParam(req) && !refreshSecret) {
+      res.set("Cache-Control", EDGE_CACHE_CONTROL_FORCE);
+      res.status(403).send(renderLoadingErrorPage("Parametro autorefresh no autorizado."));
+      return;
+    }
+
     if (refreshSecret) {
       const data = await getTournamentData({ forceRefresh: true });
       const params = new URLSearchParams({
@@ -1005,11 +1169,8 @@ app.get("/", async (req, res) => {
     res.status(200).send(renderPage(data, currentTab, refreshDoneDate));
   } catch (error) {
     console.error(error);
-    res.status(error.statusCode || 500).send(`
-      <h1>Error al cargar los datos</h1>
-      <p>${escapeHtml(error.message)}</p>
-      <p>Revisa variables de entorno y permisos de Google Sheets.</p>
-    `);
+    res.set("Cache-Control", EDGE_CACHE_CONTROL_FORCE);
+    res.status(error.statusCode || 500).send(renderLoadingErrorPage(error.message));
   }
 });
 
