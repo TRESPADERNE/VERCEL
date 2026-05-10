@@ -384,10 +384,23 @@ function renderBodyByTab(data, tab) {
   }
 }
 
+function renderAllTabPanels(data, currentTab) {
+  return TABS.map((tab) => {
+    const active = tab === currentTab;
+    const hiddenAttr = active ? "" : ' hidden="hidden"';
+    return `<section class="tab-panel" data-tab-panel="${escapeHtml(tab)}"${hiddenAttr}>${renderBodyByTab(
+      data,
+      tab
+    )}</section>`;
+  }).join("");
+}
+
 function renderTabs(currentTab) {
   return TABS.map((tab) => {
     const active = tab === currentTab ? " active" : "";
-    return `<a class="tab-link${active}" href="${escapeHtml(buildTabHref(tab))}">${escapeHtml(tab)}</a>`;
+    return `<a class="tab-link${active}" href="${escapeHtml(buildTabHref(tab))}" data-tab="${escapeHtml(
+      tab
+    )}">${escapeHtml(tab)}</a>`;
   }).join("");
 }
 
@@ -568,6 +581,9 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
         background: var(--brand);
         color: #fff;
         border-color: var(--brand);
+      }
+      .tab-panel[hidden] {
+        display: none;
       }
       .section-title {
         margin: 0.9rem 0 0.45rem;
@@ -817,7 +833,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
       </header>
 
       <nav class="tabs" aria-label="Fases del torneo">${renderTabs(currentTab)}</nav>
-      <section id="tab-content">${renderBodyByTab(data, currentTab)}</section>
+      <section id="tab-content">${renderAllTabPanels(data, currentTab)}</section>
 
       <footer class="sponsors">
         <h2 class="sponsors-title">Con la colaboracion de:</h2>
@@ -829,6 +845,36 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
         </div>
       </footer>
     </main>
+    <script>
+      (function tabsNoRequestSwitch() {
+        const tabLinks = Array.from(document.querySelectorAll(".tab-link[data-tab]"));
+        const tabPanels = Array.from(document.querySelectorAll(".tab-panel[data-tab-panel]"));
+
+        function activateTab(tabName) {
+          tabLinks.forEach((link) => {
+            link.classList.toggle("active", link.dataset.tab === tabName);
+          });
+          tabPanels.forEach((panel) => {
+            panel.hidden = panel.dataset.tabPanel !== tabName;
+          });
+        }
+
+        tabLinks.forEach((link) => {
+          link.addEventListener("click", (event) => {
+            event.preventDefault();
+            const tabName = link.dataset.tab;
+            if (!tabName) return;
+
+            activateTab(tabName);
+
+            const url = new URL(window.location.href);
+            url.searchParams.set("tab", tabName);
+            url.searchParams.delete("refreshDoneAt");
+            window.history.replaceState({}, "", url.toString());
+          });
+        });
+      })();
+    </script>
   </body>
 </html>`;
 }
