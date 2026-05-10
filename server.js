@@ -7,11 +7,11 @@ const app = express();
 const port = process.env.PORT || 3000;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const MANUAL_REFRESH_ONLY = true;
-const MANUAL_MAX_STALE_MS = 2 * 60 * 1000;
 const VERSION_POLL_MS = 60 * 1000;
 // const AUTO_REFRESH_MS = 60 * 1000;
 const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=0, must-revalidate";
 const EDGE_CACHE_CONTROL_FORCE = "no-store";
+const VERSION_CACHE_CONTROL = "private, max-age=0, must-revalidate";
 const REFRESH_SECRET_PARAM = "autorefresh";
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "";
 const REFRESH_DONE_PARAM = "refreshDoneAt";
@@ -215,12 +215,20 @@ async function getTournamentData(options = {}) {
   if (!forceRefresh && cache.data) {
     const ageMs = now - cache.fetchedAt;
     if (MANUAL_REFRESH_ONLY) {
-      if (ageMs < MANUAL_MAX_STALE_MS) {
-        return cache.data;
-      }
+      return cache.data;
     } else if (ageMs < CACHE_TTL_MS) {
       return cache.data;
     }
+  }
+
+  if (!forceRefresh && MANUAL_REFRESH_ONLY) {
+    if (cacheLoadingPromise) {
+      return cacheLoadingPromise;
+    }
+
+    const error = new Error("No hay datos cacheados. Ejecuta ?autorefresh para cargar Google Sheets.");
+    error.statusCode = 503;
+    throw error;
   }
 
   if (cacheLoadingPromise) {
@@ -441,13 +449,20 @@ function isNotModified(req, res, etag, cacheControl) {
   return false;
 }
 
+function getCachedVersion() {
+  return cache.data ? new Date(cache.data.generatedAt).toISOString() : "";
+}
+
 function getCurrentTabFromReq(req) {
   const requestedTab = String(req.query.tab || "Grupo A");
   return TABS.includes(requestedTab) ? requestedTab : "Grupo A";
 }
 
 function getValidatedRefreshSecret(req) {
-  if (!REFRESH_SECRET) return "";
+  const hasRefreshParam = Object.prototype.hasOwnProperty.call(req.query, REFRESH_SECRET_PARAM);
+  if (!hasRefreshParam) return "";
+  if (!REFRESH_SECRET) return "manual-refresh";
+
   const provided = String(req.query[REFRESH_SECRET_PARAM] || "").trim();
   return provided && provided === REFRESH_SECRET ? provided : "";
 }
@@ -889,7 +904,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
 
           const response = await fetch("/api/version", {
             headers: { Accept: "application/json" },
-            cache: "no-store",
+            cache: "no-cache",
           });
           if (!response.ok) return;
 
@@ -940,17 +955,21 @@ app.get("/api/data", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Error al cargar datos" });
+    res.status(error.statusCode || 500).json({ error: "Error al cargar datos" });
   }
 });
 
-app.get("/api/version", async (_req, res) => {
+app.get("/api/version", (req, res) => {
   try {
-    const data = await getTournamentData({ forceRefresh: false });
-    res.set("Cache-Control", EDGE_CACHE_CONTROL);
+    const version = getCachedVersion();
+    const etag = buildEtag(version || "no-data");
+    if (isNotModified(req, res, etag, VERSION_CACHE_CONTROL)) {
+      return;
+    }
+
     res.status(200).json({
-      version: new Date(data.generatedAt).toISOString(),
-      generatedAtFormatted: formatDate(data.generatedAt),
+      version,
+      generatedAtFormatted: cache.data ? formatDate(cache.data.generatedAt) : "",
     });
   } catch (error) {
     console.error(error);
@@ -986,7 +1005,7 @@ app.get("/", async (req, res) => {
     res.status(200).send(renderPage(data, currentTab, refreshDoneDate));
   } catch (error) {
     console.error(error);
-    res.status(500).send(`
+    res.status(error.statusCode || 500).send(`
       <h1>Error al cargar los datos</h1>
       <p>${escapeHtml(error.message)}</p>
       <p>Revisa variables de entorno y permisos de Google Sheets.</p>
