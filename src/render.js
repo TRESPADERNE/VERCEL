@@ -102,7 +102,7 @@ function renderGroupPage(group) {
   `;
 }
 
-function renderEliminatoriasPage(eliminatoriasData, quarterTitle, semiTitle, finalTitle, thirdTitle) {
+function renderEliminatoriasPage(eliminatoriasData, quarterTitle, semiTitle, finalTitle) {
   const quarters = eliminatoriasData.quarters?.length
     ? eliminatoriasData.quarters.map((match) => renderMatchCard(match)).join("")
     : '<p class="empty">No hay cuartos de final para mostrar.</p>';
@@ -111,9 +111,9 @@ function renderEliminatoriasPage(eliminatoriasData, quarterTitle, semiTitle, fin
     : '<p class="empty">No hay semifinales para mostrar.</p>';
   const finals = eliminatoriasData.finals?.length
     ? eliminatoriasData.finals
-        .map((match, index) => {
-          const title = index === 0 ? finalTitle : thirdTitle;
-          return `<h3 class="section-title">${escapeHtml(title)}</h3>${renderMatchCard(match)}`;
+        .slice(0, 1)
+        .map((match) => {
+          return `<h3 class="section-title">${escapeHtml(finalTitle)}</h3>${renderMatchCard(match)}`;
         })
         .join("")
     : '<p class="empty">No hay finales para mostrar.</p>';
@@ -138,8 +138,7 @@ function renderBodyByTab(data, tab) {
         data.eliminatorias,
         "Cuartos de Final",
         "Semifinales",
-        "Final",
-        "Tercer y Cuarto Puesto"
+        "Final"
       );
     default:
       return renderGroupPage(data.groupA);

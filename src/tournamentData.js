@@ -179,8 +179,11 @@ async function getEliminatoriasData(sheets, sheetId, sheetName) {
       `'${sheetName}'!E11:I14`,
       `'${sheetName}'!B18:I19`,
       `'${sheetName}'!E23:I24`,
-      `'${sheetName}'!B28:I29`,
-      `'${sheetName}'!E33:I34`,
+      `'${sheetName}'!B28:I28`,
+      `'${sheetName}'!E33:I33`,
+      // Tercer y cuarto puesto desactivado:
+      // `'${sheetName}'!B29:I29`,
+      // `'${sheetName}'!E34:I34`,
     ]);
 
   return {
