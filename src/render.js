@@ -102,28 +102,33 @@ function renderGroupPage(group) {
   `;
 }
 
-function renderEliminatoriasPage(eliminatoriasData, quarterTitle, semiTitle, finalTitle) {
-  const quarters = eliminatoriasData.quarters?.length
-    ? eliminatoriasData.quarters.map((match) => renderMatchCard(match)).join("")
-    : '<p class="empty">No hay cuartos de final para mostrar.</p>';
-  const semis = eliminatoriasData.semis?.length
-    ? eliminatoriasData.semis.map((match) => renderMatchCard(match)).join("")
-    : '<p class="empty">No hay semifinales para mostrar.</p>';
-  const finals = eliminatoriasData.finals?.length
-    ? eliminatoriasData.finals
-        .slice(0, 1)
-        .map((match) => {
-          return `<h3 class="section-title">${escapeHtml(finalTitle)}</h3>${renderMatchCard(match)}`;
-        })
-        .join("")
-    : '<p class="empty">No hay finales para mostrar.</p>';
+function renderKnockoutPhase(title, matches = [], emptyMessage, matchLimit = null) {
+  const phaseMatches = matchLimit ? matches.slice(0, matchLimit) : matches;
+  const matchesHtml = phaseMatches.length
+    ? phaseMatches.map((match, index) => renderMatchCard(match, index % 2 === 1)).join("")
+    : `<p class="empty">${escapeHtml(emptyMessage)}</p>`;
 
   return `
-    <h3 class="section-title">${escapeHtml(quarterTitle)}</h3>
-    ${quarters}
-    <h3 class="section-title">${escapeHtml(semiTitle)}</h3>
-    ${semis}
-    ${finals}
+    <section class="knockout-phase">
+      <h3 class="section-title knockout-title">${escapeHtml(title)}</h3>
+      <div class="matches-section knockout-matches">${matchesHtml}</div>
+    </section>
+  `;
+}
+
+function renderEliminatoriasPage(eliminatoriasData, quarterTitle, semiTitle, finalTitle) {
+  return `
+    ${renderKnockoutPhase(
+      quarterTitle,
+      eliminatoriasData.quarters,
+      "No hay cuartos de final para mostrar."
+    )}
+    ${renderKnockoutPhase(
+      semiTitle,
+      eliminatoriasData.semis,
+      "No hay semifinales para mostrar."
+    )}
+    ${renderKnockoutPhase(finalTitle, eliminatoriasData.finals, "No hay finales para mostrar.", 1)}
   `;
 }
 

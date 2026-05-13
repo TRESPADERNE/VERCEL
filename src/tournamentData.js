@@ -186,11 +186,21 @@ async function getEliminatoriasData(sheets, sheetId, sheetName) {
       // `'${sheetName}'!E34:I34`,
     ]);
 
+  const QUARTER_MATCHES = 4;
+  const SEMI_MATCHES = 2;
+  const FINAL_MATCHES = 1;
+
+  function buildMatches(rows = [], penaltyRows = [], expectedCount = 0) {
+    return Array.from({ length: expectedCount }, (_unused, index) => {
+      return rowToMatch(rows[index] || [], penaltyRows[index] || []);
+    });
+  }
+
   return {
     sheetName,
-    quarters: quarterRows.map((row, index) => rowToMatch(row, quarterPenaltiesRows[index] || [])),
-    semis: semiRows.map((row, index) => rowToMatch(row, semiPenaltiesRows[index] || [])),
-    finals: finalRows.map((row, index) => rowToMatch(row, finalPenaltiesRows[index] || [])),
+    quarters: buildMatches(quarterRows, quarterPenaltiesRows, QUARTER_MATCHES),
+    semis: buildMatches(semiRows, semiPenaltiesRows, SEMI_MATCHES),
+    finals: buildMatches(finalRows, finalPenaltiesRows, FINAL_MATCHES),
   };
 }
 
@@ -294,8 +304,14 @@ function getMockTournamentData() {
       sheetName: "Eliminatorias",
       quarters: [
         rowToMatch(["16:00", "", "1", "Burgos CF", "1", "CD Salamanca FF", "1"], ["", "4", "", "3"]),
+        rowToMatch(["16:00", "", "2", "Real Valladolid CF", "", "CD Vasconia", ""]),
+        rowToMatch(["16:45", "", "1", "Real Sociedad", "", "CD San Jose", ""]),
+        rowToMatch(["16:45", "", "2", "CD Parquesol", "", "Mullier FCN", ""]),
       ],
-      semis: [rowToMatch(["17:00", "", "1", "Burgos CF", "", "Real Sociedad", ""])],
+      semis: [
+        rowToMatch(["17:00", "", "1", "Burgos CF", "", "Real Sociedad", ""]),
+        rowToMatch(["17:00", "", "2", "Real Valladolid CF", "", "CD Parquesol", ""]),
+      ],
       finals: [rowToMatch(["18:30", "", "1", "Burgos CF", "", "Real Valladolid CF", ""])],
     },
   };

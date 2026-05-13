@@ -185,6 +185,30 @@ h1 {
 }
 .match-card:first-child { border-top: none; }
 .match-card.shaded { background: #f7fafe; }
+.knockout-phase {
+  margin-top: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 8px 20px rgba(26, 45, 70, 0.06);
+}
+.knockout-phase:first-child { margin-top: 0; }
+.knockout-title {
+  margin: 0;
+  border-left: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  padding: 0.55rem 0.65rem;
+}
+.knockout-matches {
+  margin-top: 0;
+  border: 0;
+  border-radius: 0;
+}
 .match-meta {
   text-align: center;
   color: var(--muted);
