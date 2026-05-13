@@ -290,10 +290,10 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
 
       <footer class="pie">
         <div class="contenido-filas">
-          <img src="https://i.imgur.com/BqwXNyE.png" alt="im1" />
-          <img src="https://i.imgur.com/msJDNkK.png" alt="im2" />
-          <img src="https://i.imgur.com/ui8rr8d.jpg" alt="im3" />
-          <img src="https://i.imgur.com/yHbDR6F.jpg" alt="im4" />
+          <img src="https://i.imgur.com/BqwXNyE.png?v=1" alt="im1" />
+          <img src="https://i.imgur.com/msJDNkK.png?v=1" alt="im2" />
+          <img src="https://i.imgur.com/ui8rr8d.jpg?v=1" alt="im3" />
+          <img src="https://i.imgur.com/yHbDR6F.jpg?v=1" alt="im4" />
         </div>
       </footer>
     </main>
