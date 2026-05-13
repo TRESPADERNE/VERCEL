@@ -287,6 +287,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
 
       <nav class="tabs" aria-label="Fases del torneo">${renderTabs(currentTab)}</nav>
       <section id="tab-content">${renderAllTabPanels(data, currentTab)}</section>
+      <div class="resultados-separador" aria-hidden="true"></div>
 
       <footer class="pie">
         <div class="contenido-filas">

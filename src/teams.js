@@ -45,7 +45,7 @@ function teamLogo(teamName) {
     case "Real Sociedad":
       return "/static/realsociedad.png";
     default:
-      return "/static/logo_II_BCF_CUP.png";
+      return "https://i.imgur.com/zk3Tj9D.png?v=1";
   }
 }
 

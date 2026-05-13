@@ -255,10 +255,15 @@ h1 {
   font-size: 0.75rem;
   color: #345f95;
 }
+.resultados-separador {
+  height: 2px;
+  margin-top: 0.85rem;
+  margin-bottom: 0.35rem;
+  background: linear-gradient(90deg, transparent 0%, #c8d5e6 12%, #c8d5e6 88%, transparent 100%);
+}
 .pie {
-  margin-top: 1rem;
+  margin-top: 0;
   padding-top: 0.8rem;
-  border-top: 1px solid var(--line);
 }
 .contenido-filas {
   display: grid;
