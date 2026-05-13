@@ -274,22 +274,13 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>BCF CUP Alevin Femenino</title>
+    <title>Torneo Alevin Femenino</title>
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
     <main class="page">
       <header class="header">
         <img class="header-banner" src="https://i.imgur.com/S0xSPwE.png" alt="cabecera" />
-        <!-- <div class="header-logos">
-          <img src="/static/logo_II_BCF_CUP.png" alt="Logo BCF CUP" />
-          <img src="/static/logoFundacionCajaBurgos.png" alt="Fundacion Caja Burgos" />
-        </div>
-        <h1>II Torneo BCF CUP Alevin Femenino<br />Fundacion Caja de Burgos</h1> -->
-        <!-- <div class="toolbar">
-          <span id="last-updated">Ultima actualizacion: ${escapeHtml(formatDate(data.generatedAt))}</span>
-          <a class="refresh" href="${escapeHtml(currentTabHref)}">Actualizar</a>
-        </div> -->
         ${refreshDoneHtml}
       </header>
 
