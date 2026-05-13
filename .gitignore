@@ -232,3 +232,6 @@ coverage/
 # OS/editor
 .DS_Store
 Thumbs.db
+
+# Project-specific assets to keep local only
+static/cabecera_web.png

@@ -280,7 +280,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
   <body>
     <main class="page">
       <header class="header">
-        <img class="header-banner" src="/static/cabecera_web.png" alt="II Torneo BCF CUP Alevin Femenino Fundacion Caja de Burgos" />
+        <img class="header-banner" src="https://i.imgur.com/S0xSPwE.png" alt="cabecera" />
         <!-- <div class="header-logos">
           <img src="/static/logo_II_BCF_CUP.png" alt="Logo BCF CUP" />
           <img src="/static/logoFundacionCajaBurgos.png" alt="Fundacion Caja Burgos" />
