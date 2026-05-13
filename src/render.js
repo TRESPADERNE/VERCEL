@@ -274,6 +274,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Web informativa de torneo amateur de futbol base sin animo de lucro." />
     <title>Torneo Alevin Femenino</title>
     <link rel="stylesheet" href="/static/style.css" />
   </head>
@@ -287,13 +288,12 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
       <nav class="tabs" aria-label="Fases del torneo">${renderTabs(currentTab)}</nav>
       <section id="tab-content">${renderAllTabPanels(data, currentTab)}</section>
 
-      <footer class="sponsors">
-        <h2 class="sponsors-title">Con la colaboracion de:</h2>
-        <div class="sponsors-logos">
-          <img src="/static/frutopia.png" alt="Molino Tejada" />
-          <img src="/static/ezsa.png" alt="Ezsa" />
-          <img src="/static/nb.jpg" alt="Grupo NB" />
-          <img src="/static/diputacion.jpg" alt="Diputacion" />
+      <footer class="pie">
+        <div class="contenido-filas">
+          <img src="https://i.imgur.com/BqwXNyE.png" alt="im1" />
+          <img src="https://i.imgur.com/msJDNkK.png" alt="im2" />
+          <img src="https://i.imgur.com/ui8rr8d.jpg" alt="im3" />
+          <img src="https://i.imgur.com/yHbDR6F.jpg" alt="im4" />
         </div>
       </footer>
     </main>
@@ -311,7 +311,7 @@ function renderLoadingErrorPage(message) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>BCF CUP Alevin Femenino</title>
+    <title>Torneo Alevin Femenino</title>
     <style>
       body {
         margin: 0;

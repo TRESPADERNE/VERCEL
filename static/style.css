@@ -255,23 +255,17 @@ h1 {
   font-size: 0.75rem;
   color: #345f95;
 }
-.sponsors {
+.pie {
   margin-top: 1rem;
   padding-top: 0.8rem;
   border-top: 1px solid var(--line);
 }
-.sponsors-title {
-  margin: 0 0 0.5rem;
-  color: var(--muted);
-  font-size: 0.92rem;
-  text-align: center;
-}
-.sponsors-logos {
+.contenido-filas {
   display: grid;
   gap: 0.6rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-.sponsors-logos img {
+.contenido-filas img {
   width: 100%;
   max-height: 72px;
   object-fit: contain;
@@ -279,6 +273,12 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 0.4rem;
+}
+.nota-amateur {
+  margin: 0.55rem 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 .empty {
   margin: 0.7rem 0;
