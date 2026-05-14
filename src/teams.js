@@ -29,9 +29,9 @@ function teamLogo(teamName) {
       return "/static/parquesol.png";
     case "Burgos CF":
     case 'Burgos CF "B"':
-      return "/static/burgoscf.png";
+      return "https://i.imgur.com/j3LBEda.png?v=1";
     case "Real Valladolid CF":
-      return "/static/valladolid.png";
+      return "https://i.imgur.com/qKhdrpQ.png?v=1";
     case "CD San Jose":
       return "/static/sanjose.png";
     case "Gimnastica Segoviana":
