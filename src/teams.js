@@ -21,29 +21,22 @@ const TEAM_ALIAS_NORMALIZED = Object.fromEntries(
 
 function teamLogo(teamName) {
   switch (normalizeText(teamName)) {
-    case "CD Palencia FF":
-      return "/static/palencia.jpg";
     case "Mullier FCN":
-      return "/static/mullier.png";
+      return "https://i.imgur.com/4qg4UQM.png?v=1";
     case "CD Parquesol":
-      return "/static/parquesol.png";
+      return "https://i.imgur.com/e0wJO1f.png?v=1";
     case "Burgos CF":
-    case 'Burgos CF "B"':
       return "https://i.imgur.com/j3LBEda.png?v=1";
     case "Real Valladolid CF":
       return "https://i.imgur.com/qKhdrpQ.png?v=1";
-    case "CD San Jose":
-      return "/static/sanjose.png";
-    case "Gimnastica Segoviana":
-      return "/static/segoviana.png";
     case "CD Vasconia":
-      return "/static/vasconia.png";
+      return "https://i.imgur.com/L5T9kfY.png?v=1";
     case "CD Salamanca FF":
-      return "/static/salamanca.png";
+      return "https://i.imgur.com/Bqh440C.png?v=1";
     case "Martutene KE":
-      return "/static/martutene.png";
+      return "https://i.imgur.com/cyKsOK6.png?v=1";
     case "Real Sociedad":
-      return "/static/realsociedad.png";
+      return "https://i.imgur.com/qm9OFus.png?v=1";
     default:
       return "https://i.imgur.com/zk3Tj9D.png?v=1";
   }
