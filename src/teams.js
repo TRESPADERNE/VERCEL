@@ -11,7 +11,7 @@ const TEAM_ALIAS = {
   "CD San Jose": "SJOS",
   "CD Vasconia": "VAS",
   "CD Salamanca FF": "SAL",
-  "Cd Sanse": "SAN",
+  "CD Sanse": "SAN",
   "Real Sociedad": "RSO",
 };
 
