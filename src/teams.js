@@ -11,7 +11,7 @@ const TEAM_ALIAS = {
   "CD San Jose": "SJOS",
   "CD Vasconia": "VAS",
   "CD Salamanca FF": "SAL",
-  "Martutene KE": "MAR",
+  "Cd Sanse": "SAN",
   "Real Sociedad": "RSO",
 };
 
@@ -33,8 +33,8 @@ function teamLogo(teamName) {
       return "https://i.imgur.com/L5T9kfY.png?v=1";
     case "CD Salamanca FF":
       return "https://i.imgur.com/Bqh440C.png?v=1";
-    case "Martutene KE":
-      return "https://i.imgur.com/cyKsOK6.png?v=1";
+    case "CD Sanse":
+      return "https://i.imgur.com/EiurODB.png?v=1";
     case "Real Sociedad":
       return "https://i.imgur.com/qm9OFus.png?v=1";
     default:
