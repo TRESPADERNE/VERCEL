@@ -290,7 +290,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
       <div class="resultados-separador" aria-hidden="true"></div>
 
       <footer class="pie">
-        <img class="footer-banner" src="https://i.imgur.com/XMo3BK.png?v=1" alt="pie" />
+        <img class="footer-banner" src="https://i.imgur.com/XMo3BKq.png?v=1" alt="pie" />
       </footer>
     </main>
     <script>${renderTabScript()}
