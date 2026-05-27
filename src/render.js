@@ -281,7 +281,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
   <body>
     <main class="page">
       <header class="header">
-        <img class="header-banner" src="https://i.imgur.com/bivXggn.png" alt="cabecera" />
+        <img class="header-banner" src="https://i.imgur.com/SlMsA7y.png?v=1" alt="cabecera" />
         ${refreshDoneHtml}
       </header>
 
@@ -290,7 +290,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
       <div class="resultados-separador" aria-hidden="true"></div>
 
       <footer class="pie">
-        <img class="footer-banner" src="https://i.imgur.com/XMo3BK.png?v=1" alt="im5" />
+        <img class="footer-banner" src="https://i.imgur.com/XMo3BK.png?v=1" alt="pie" />
       </footer>
     </main>
     <script>${renderTabScript()}
