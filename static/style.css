@@ -228,19 +228,10 @@ body {
   margin-top: 0;
   padding-top: 0.8rem;
 }
-.contenido-filas {
-  display: grid;
-  gap: 0.6rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.contenido-filas img {
+.footer-banner {
   width: 100%;
-  max-height: 72px;
+  display: block;
   object-fit: contain;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0.4rem;
 }
 .empty {
   margin: 0.7rem 0;

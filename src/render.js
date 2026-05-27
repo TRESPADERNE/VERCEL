@@ -281,7 +281,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
   <body>
     <main class="page">
       <header class="header">
-        <img class="header-banner" src="https://i.imgur.com/S0xSPwE.png" alt="cabecera" />
+        <img class="header-banner" src="https://i.imgur.com/bivXggn.png" alt="cabecera" />
         ${refreshDoneHtml}
       </header>
 
@@ -290,12 +290,7 @@ function renderPage(data, currentTab, refreshDoneDate = null) {
       <div class="resultados-separador" aria-hidden="true"></div>
 
       <footer class="pie">
-        <div class="contenido-filas">
-          <img src="https://i.imgur.com/BqwXNyE.png?v=1" alt="im1" />
-          <img src="https://i.imgur.com/msJDNkK.png?v=1" alt="im2" />
-          <img src="https://i.imgur.com/ui8rr8d.jpg?v=1" alt="im3" />
-          <img src="https://i.imgur.com/yHbDR6F.jpg?v=1" alt="im4" />
-        </div>
+        <img class="footer-banner" src="https://i.imgur.com/XMo3BK.png?v=1" alt="im5" />
       </footer>
     </main>
     <script>${renderTabScript()}

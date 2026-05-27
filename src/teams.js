@@ -38,7 +38,7 @@ function teamLogo(teamName) {
     case "Real Sociedad":
       return "https://i.imgur.com/qm9OFus.png?v=1";
     default:
-      return "https://i.imgur.com/zk3Tj9D.png?v=1";
+      return "https://i.imgur.com/TbQFLRO.png?v=1";
   }
 }
 
