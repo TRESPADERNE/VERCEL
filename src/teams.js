@@ -5,7 +5,7 @@ const TEAM_ALIAS = {
   "CD Parquesol": "PAR",
   "Mullier FCN": "MUL",
   "CD Palencia FF": "PAL",
-  'Burgos CF "B"': "BURB",
+  'Burgos CF B': "BURB",
   "Gimnastica Segoviana": "GSEG",
   "Real Valladolid CF": "RVA",
   "CD San Jose": "SJOS",
