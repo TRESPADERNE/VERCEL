@@ -29,8 +29,8 @@ function teamLogo(teamName) {
       return "https://i.imgur.com/j3LBEda.png?v=1";
     case "Real Valladolid CF":
       return "https://i.imgur.com/qKhdrpQ.png?v=1";
-    case "CD Vasconia":
-      return "https://i.imgur.com/L5T9kfY.png?v=1";
+    case "Burgos CF B":
+      return "https://i.imgur.com/j3LBEda.png?v=1";
     case "CD Salamanca FF":
       return "https://i.imgur.com/Bqh440C.png?v=1";
     case "CD Sanse":

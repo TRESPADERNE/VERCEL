@@ -296,7 +296,7 @@ function getMockTournamentData() {
       sheetName: "Grupo B",
       matches: [
         rowToMatch(["10:00", "", "1", "Real Valladolid CF", "1", "CD San Jose", "0"]),
-        rowToMatch(["10:45", "", "2", "CD Vasconia", "2", "CD Salamanca FF", "2"]),
+        rowToMatch(["10:45", "", "2", "Burgos CF B", "2", "CD Salamanca FF", "2"]),
       ],
       table,
     },
@@ -304,7 +304,7 @@ function getMockTournamentData() {
       sheetName: "Eliminatorias",
       quarters: [
         rowToMatch(["16:00", "", "1", "Burgos CF", "1", "CD Salamanca FF", "1"], ["", "4", "", "3"]),
-        rowToMatch(["16:00", "", "2", "Real Valladolid CF", "", "CD Vasconia", ""]),
+        rowToMatch(["16:00", "", "2", "Real Valladolid CF", "", "Burgos CF B", ""]),
         rowToMatch(["16:45", "", "1", "Real Sociedad", "", "CD San Jose", ""]),
         rowToMatch(["16:45", "", "2", "CD Parquesol", "", "Mullier FCN", ""]),
       ],
